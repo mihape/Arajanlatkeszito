@@ -8,29 +8,16 @@ All bundled demo data is fictional and intended only for development, screenshot
 
 This repository currently contains:
 
-- a working offline browser prototype
-- an initial Electron `main`/`preload` shell
+- a working Electron app shell
+- an offline browser preview fallback
 - quote dashboard and quote editor
 - customer records
 - exterior plastic window/door profiles and opening types
 - price matrices with non-manufacturable cells
 - interior door model pricing
 - accessories, installation items, VAT, margin, and print-friendly quote output
+- tested shared pricing calculations for matrix rounding, VAT, margin, accessories, and custom interior frames
 - documentation for architecture, roadmap, GitHub workflow, and CRM direction
-
-## Run The Prototype
-
-Open `index.html` directly in a browser, or run a local server:
-
-```bash
-python3 -m http.server 5173
-```
-
-Then open:
-
-```text
-http://127.0.0.1:5173/index.html
-```
 
 ## Electron Development
 
@@ -54,6 +41,20 @@ Run checks:
 npm run check
 ```
 
+## Browser Preview Fallback
+
+Electron is the primary development path. If you only need a quick rendered preview, run a local server:
+
+```bash
+python3 -m http.server 5173
+```
+
+Then open:
+
+```text
+http://127.0.0.1:5173/src/renderer/index.html?mode=demo
+```
+
 ## Windows Build
 
 ```bash
@@ -64,7 +65,7 @@ Build output is written to `dist/`.
 
 ## Hungarian Summary
 
-Ez egy helyi Windows ajanlatkeszito app nyilaszarokhoz. A jelenlegi verzio meg prototipus, de mar elindult az Electron irany: kesobb SQLite adatbazissal, stabil PDF exporttal, GitHub release folyamattal es CRM-integracios adapterekkel kell tovabbvinni.
+Ez egy helyi Windows ajanlatkeszito app nyilaszarokhoz. A jelenlegi verzio mar Electron szerkezetben fut, es kesobb SQLite adatbazissal, stabil PDF exporttal, GitHub release folyamattal es CRM-integracios adapterekkel kell tovabbvinni.
 
 ## Documentation
 
@@ -75,5 +76,6 @@ Ez egy helyi Windows ajanlatkeszito app nyilaszarokhoz. A jelenlegi verzio meg p
 - [Security](docs/SECURITY.md)
 - [QA notes](docs/QA.md)
 - [CRM integration](docs/CRM_INTEGRATION.md)
+- [SQLite migration](docs/SQLITE_MIGRATION.md)
 - [GitHub workflow](docs/GITHUB-WORKFLOW.md)
 - [Development decisions](docs/DECISIONS.md)

@@ -964,4 +964,12 @@ tr.selectable.active td {
   .internal-only {
     display: none !important;
   }
+
+  body.print-internal .internal-only {
+    display: block !important;
+  }
+
+  body.print-internal span.internal-only {
+    display: inline !important;
+  }
 }

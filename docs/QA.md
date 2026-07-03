@@ -87,7 +87,7 @@ python3 -m http.server 5173
 Release URL:
 
 ```text
-http://127.0.0.1:5173/index.html?mode=release
+http://127.0.0.1:5173/src/renderer/index.html?mode=release
 ```
 
 Observed:
@@ -105,7 +105,7 @@ Screenshot:
 Demo URL:
 
 ```text
-http://127.0.0.1:5173/index.html?mode=demo
+http://127.0.0.1:5173/src/renderer/index.html?mode=demo
 ```
 
 Observed:
@@ -147,6 +147,42 @@ Fix applied:
 - changed GitHub Actions dependency install from `npm install` to `npm ci`
 
 Next:
+
+## 2026-07-03 renderer move follow-up
+
+The Electron renderer was moved from the project root into `src/renderer/`.
+
+Current browser fallback URLs:
+
+```text
+http://127.0.0.1:5173/src/renderer/index.html?mode=release
+http://127.0.0.1:5173/src/renderer/index.html?mode=demo
+```
+
+Electron `main` now loads `src/renderer/index.html` directly.
+
+## 2026-07-03 automated renderer smoke fallback
+
+Windows interop from the current WSL session failed with:
+
+```text
+UtilBindVsockAnyPort:307: socket failed 1
+```
+
+Because Windows Chrome and PowerShell could not be launched from WSL, the rendered screenshot smoke could not be repeated locally in this session.
+
+Fallback added:
+
+```bash
+npm run check
+```
+
+This now also runs `tests/render-smoke.test.js`, which loads `src/shared/pricing-calculations.js` before `src/renderer/app.js` in a minimal browser-like VM and verifies:
+
+- release mode has no `Demo Partner Kft.` or `AJ-2026-0001`
+- demo mode contains `Demo Partner Kft.`
+- demo mode contains `AJ-2026-0001`
+- the renderer script order is correct
 
 - rerun `Build Windows` workflow on `main`
 

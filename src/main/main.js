@@ -1,5 +1,9 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
+const { DATA_CHANNELS } = require("../shared/storage-contract");
+const { createPendingSqliteAdapter } = require("./database");
+
+const dataAdapter = createPendingSqliteAdapter();
 
 function createMainWindow() {
   const appMode = getAppMode();
@@ -18,7 +22,7 @@ function createMainWindow() {
     }
   });
 
-  window.loadFile(path.join(__dirname, "../../index.html"), {
+  window.loadFile(path.join(__dirname, "../renderer/index.html"), {
     query: { mode: appMode }
   });
 }
@@ -26,6 +30,7 @@ function createMainWindow() {
 app.whenReady().then(() => {
   ipcMain.handle("app:get-version", () => app.getVersion());
   ipcMain.handle("app:get-mode", () => getAppMode());
+  ipcMain.handle(DATA_CHANNELS.GET_STATUS, () => dataAdapter.getStatus());
   createMainWindow();
 
   app.on("activate", () => {

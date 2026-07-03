@@ -60,14 +60,27 @@ src/
     app.js
     styles.css
   shared/
-    calculations.js
-    schema.js
+    pricing-calculations.js
+    sqlite-schema.js
+    storage-contract.js
     ids.js
 scripts/
 package.json
 ```
 
-Aktualis atmeneti allapot: az Electron `main` es `preload` reteg mar a `src/` mappaban van, a renderer fajlok meg a projekt gyokereben maradtak, hogy a bongeszos prototipus tovabbra is azonnal megnyithato legyen. A kesobbi Electron rendezesnel ezek atkerulhetnek `src/renderer/` ala.
+Aktualis allapot: az Electron `main`, `preload` es `renderer` retegek mar a `src/` mappaban vannak. Az elsodleges inditas `npm run dev`, a bongeszos ellenorzes pedig csak fallback a `src/renderer/index.html` utvonalon.
+
+A SQLite elokeszites elso kodszintu elemei:
+
+- `src/shared/sqlite-schema.js`: elso sema/migracio v1.
+- `src/shared/storage-contract.js`: tabla- es szinkronmezok, elso IPC csatorna.
+- `src/main/database.js`: ideiglenes adapterstatusz, kesobb a valodi SQLite kapcsolat helye.
+- `window.nyilaszaroApp.data.getStatus()`: preload hatar bizonyitasara.
+
+A kalkulacios logika elso tesztelheto modulja:
+
+- `src/shared/pricing-calculations.js`
+- `tests/pricing-calculations.test.js`
 
 ## Release es demo mod
 

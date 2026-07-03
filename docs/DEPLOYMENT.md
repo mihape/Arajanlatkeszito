@@ -21,9 +21,11 @@ npm run check
 
 Current check scope:
 
-- renderer syntax: `app.js`
+- renderer syntax: `src/renderer/app.js`
 - Electron main process syntax
 - Electron preload syntax
+- shared pricing/schema modules
+- pricing calculation unit tests
 
 ## Windows Build
 

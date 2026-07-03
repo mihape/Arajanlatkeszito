@@ -20,8 +20,8 @@ Cel: a jelenlegi mukodo allapot biztonsagosan visszakeresheto legyen.
 Cel: a jelenlegi app Windows asztali alkalmazaskent induljon.
 
 - `package.json` letrehozasa.
-- Electron main/preload/renderer mappak kialakitasa.
-- Jelenlegi `index.html`, `styles.css`, `app.js` atemelese renderer ala.
+- Electron main/preload/renderer mappak kialakitasa. Kesz.
+- Jelenlegi `index.html`, `styles.css`, `app.js` atemelese renderer ala. Kesz.
 - Dev inditas es Windows build script.
 - Minimalis telepitheto build.
 - Release/demo mod validalasa.
@@ -47,13 +47,19 @@ Elfogadasi feltetel:
 - App ujrainditas utan minden adat megmarad.
 - JSON backupbol visszaallithato az adat.
 
+Aktualis elokeszites:
+
+- `src/shared/sqlite-schema.js`
+- `src/shared/storage-contract.js`
+- `docs/SQLITE_MIGRATION.md`
+
 ## 3. fazis - Kalkulacio es PDF stabilizalas
 
 Cel: a legfontosabb arszamitasok tesztelhetok es nem csusznak el.
 
-- Kalkulacios logika kiszervezese `shared/calculations.js` modulba.
-- Tesztesetek matrix kerekitesre, nem gyarthato cellara, AFA-ra, haszonkulcsra.
-- Belteri ajto egyedi tok felar teszt.
+- Kalkulacios logika kiszervezese `src/shared/pricing-calculations.js` modulba.
+- Tesztesetek matrix kerekitesre, nem gyarthato cellara, AFA-ra, haszonkulcsra. Elso kor kesz.
+- Belteri ajto egyedi tok felar teszt. Elso kor kesz.
 - Stabil Electron PDF export.
 - Ugyfel PDF es belso PDF szetvalasztasa.
 

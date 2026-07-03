@@ -5,22 +5,22 @@ Datum: 2026-07-03
 ## Vizsgalt forrasok
 
 - `README.md`
-- `index.html`
-- `app.js`
-- `styles.css`
+- `src/renderer/index.html`
+- `src/renderer/app.js`
+- `src/renderer/styles.css`
 - Git munkafa allapota
 
 Megjegyzes: a projekt celja kulon termek/repo, nem HR modul. A cel helyi Windows app, publikus repohoz biztonsagos demo adatokkal, installer/release folyamattal es kesobbi CRM adapter hatarokkal.
 
 ## Jelenlegi allapot
 
-A projekt jelenleg egy offline, bongeszoben futtathato prototipus. A teljes uzleti logika, felulet es helyi adattarolas az `app.js` fajlban van, az adatok `localStorage` alatt tarolodnak.
+A projekt jelenleg egy Electron szerkezetbe rendezett, offline is elonezheto prototipus. A teljes uzleti logika, felulet es helyi adattarolas meg a `src/renderer/app.js` fajlban van, az adatok `localStorage` alatt tarolodnak.
 
 Fajlok:
 
-- `index.html`: minimalis belepesi pont
-- `styles.css`: teljes feluleti stilus
-- `app.js`: adatmodell, UI rendereles, kalkulacio, PDF nyomtatas, import/export
+- `src/renderer/index.html`: minimalis renderer belepesi pont
+- `src/renderer/styles.css`: teljes feluleti stilus
+- `src/renderer/app.js`: adatmodell, UI rendereles, kalkulacio, PDF nyomtatas, import/export
 - `README.md`: rovid inditasi es funkcio leiras
 
 Git:
@@ -49,7 +49,7 @@ Git:
 - Belteri ajto modell-szin kepfeltoltes.
 - PDF/nyomtatasi nezet tetelenkenti netto arral es netto/AFA/brutto osszesitessel.
 - Teljes JSON mentes es visszatoltes.
-- Elso Electron main/preload vaz.
+- Electron main/preload/renderer vaz.
 - Release/demo mod irany: fejlesztesben demo, csomagolt appban ures release indulas.
 
 ## Atadasi doksi szerinti kovetelmenyek
@@ -67,7 +67,7 @@ Git:
 ## Fo technikai kockazatok
 
 - `localStorage` nem eleg eros eles hasznalatra: serulekenyebb, nehezebb menteni, nincs rendes sema es migracio.
-- A teljes app egy nagy `app.js` fajlban van, ami gyors prototipushoz jo, de hosszu tavon nehezen karbantarthato.
+- A teljes app egy nagy `src/renderer/app.js` fajlban van, ami gyors prototipushoz jo, de hosszu tavon nehezen karbantarthato.
 - A feltoltott kepek base64-kent kerulnek az adatbazisba, ami nagyobb adatmennyisegnel lassithatja a mentest es betoltest.
 - A PDF jelenleg bongeszo nyomtatasra epul. Ez mukodik prototipuskent, de Windows appban stabilabb, verziozhato PDF generalas kell.
 - Nincs automata teszt, igy a kalkulacios kepletek es PDF valtozasok konnyen elcsuszhatnak.

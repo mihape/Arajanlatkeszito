@@ -1,5 +1,10 @@
 const DB_KEY = "nyilaszaro-ajanlatkeszito-v1";
 const APP_MODE = getAppMode();
+const pricing = window.NyilaszaroPricing;
+
+if (!pricing) {
+  throw new Error("Pricing module is not loaded.");
+}
 
 const productTypes = [
   { id: "window", name: "Ablak", multiplier: 1 },
@@ -56,7 +61,8 @@ let ui = {
   profileDraft: createProfileDraft(),
   interiorManufacturerDraft: createInteriorManufacturerDraft(state.catalog.interiorDoors?.manufacturers?.[0]),
   interiorModelDraft: createInteriorModelDraft(state.catalog.interiorDoors?.models?.[0]),
-  toast: ""
+  toast: "",
+  printMode: "customer"
 };
 
 render();
@@ -64,6 +70,7 @@ render();
 document.addEventListener("click", handleClick);
 document.addEventListener("input", handleInput);
 document.addEventListener("change", handleChange);
+window.addEventListener("afterprint", clearPrintMode);
 
 function uid(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}-${Date.now().toString(36)}`;
@@ -696,7 +703,8 @@ function getViewMeta() {
       <button class="button" data-action="set-quote-status" data-status="Elküldve">${icon("send")}Elküldve</button>
       <button class="button" data-action="set-quote-status" data-status="Elfogadva">${icon("check")}Elfogadva</button>
       <button class="button danger" data-action="set-quote-status" data-status="Elutasítva">${icon("x")}Elutasítva</button>
-      <button class="button primary" data-action="print-quote">${icon("print")}PDF export</button>
+      <button class="button primary" data-action="print-quote" data-print-mode="customer">${icon("print")}Ügyfél PDF</button>
+      <button class="button" data-action="print-quote" data-print-mode="internal">${icon("print")}Belső PDF</button>
     `,
     customers: `<button class="button primary" data-action="new-customer">${icon("plus")}Új ügyfél</button>`,
     profiles: `<button class="button primary" data-action="new-profile">${icon("plus")}Új műanyag profil</button>`,
@@ -929,7 +937,8 @@ function renderDashboardQuoteRow(quote) {
       <td>
         <div class="row-actions">
           <button class="button" data-action="select-quote" data-id="${quote.id}">${icon("edit")}Megnyitás</button>
-          <button class="button" data-action="dashboard-print-quote" data-id="${quote.id}">${icon("print")}PDF</button>
+          <button class="button" data-action="dashboard-print-quote" data-id="${quote.id}" data-print-mode="customer">${icon("print")}PDF</button>
+          <button class="button" data-action="dashboard-print-quote" data-id="${quote.id}" data-print-mode="internal">${icon("print")}Belső</button>
           <button class="button" data-action="set-quote-status" data-id="${quote.id}" data-status="Elküldve">${icon("send")}Elküldve</button>
           <button class="button" data-action="set-quote-status" data-id="${quote.id}" data-status="Elfogadva">${icon("check")}Elfogad</button>
           <button class="button" data-action="set-quote-status" data-id="${quote.id}" data-status="Elutasítva">${icon("x")}Elutasít</button>
@@ -1978,11 +1987,12 @@ function renderPrintSheet(quote) {
   const customer = getCustomer(quote.customerId);
   const totals = calcQuote(quote);
   const validUntil = addDays(quote.createdAt, Number(state.settings.validityDays || 15));
+  const internalPrint = ui.printMode === "internal";
   return `
-    <article class="print-sheet">
+    <article class="print-sheet ${internalPrint ? "print-internal-sheet" : "print-customer-sheet"}">
       <header class="print-header">
         <div>
-          <h1 class="print-title">Árajánlat</h1>
+          <h1 class="print-title">${internalPrint ? "Belső árajánlat" : "Árajánlat"}</h1>
           <p><strong>${esc(quote.number)}</strong><br />Kelt: ${esc(quote.createdAt)} · Érvényes: ${esc(validUntil)}</p>
         </div>
         <div>
@@ -2022,12 +2032,15 @@ function renderPrintSheet(quote) {
                   : `Szín: ${esc(colorName(item.colorId))} (${esc(colorModeName(item.colorMode))}) · Üvegezés: ${esc(glassName(item.glassId))} · ${esc(formatThermalInfo(item))}<br />`}
                 ${item.productTypeId !== "interior-door" && item.extensionMm ? `Toktoldó: ${esc(item.extensionMm)} mm, ${esc(item.extensionPlacement)}<br />` : ""}
                 ${accessoryLine(item, quote, calc)}
+                <span class="internal-only">Beszerzés: ${money(calc.cost)} · Fedezet: ${money(calc.net - calc.cost)}<br /></span>
                 <strong>Nettó ár: ${money(calc.net)}</strong>
               </div>
             </div>
           `;
         }).join("")}
         <div class="print-total" style="display: grid; gap: 6px; justify-content: end;">
+          <div class="internal-only">Beszerzés összesen: ${money(totals.cost)}</div>
+          <div class="internal-only">Fedezet összesen: ${money(totals.net - totals.cost)}</div>
           <div>Nettó összesen: ${money(totals.net)}</div>
           <div>ÁFA ${esc(vatLabel(quote))}: ${money(totals.vatAmount)}</div>
           <div>Fizetendő bruttó: ${money(totals.gross)}</div>
@@ -2055,8 +2068,8 @@ function handleClick(event) {
   if (action === "select-quote") selectQuote(id);
   if (action === "new-quote") newQuote();
   if (action === "duplicate-quote") duplicateQuote();
-  if (action === "print-quote") window.print();
-  if (action === "dashboard-print-quote") printQuote(id);
+  if (action === "print-quote") printQuote(ui.selectedQuoteId, actionButton.dataset.printMode || "customer");
+  if (action === "dashboard-print-quote") printQuote(id, actionButton.dataset.printMode || "customer");
   if (action === "open-dashboard") openDashboard();
   if (action === "set-quote-status") setQuoteStatus(id || ui.selectedQuoteId, actionButton.dataset.status);
   if (action === "delete-quote") deleteQuote(id);
@@ -2342,10 +2355,18 @@ function deleteQuote(id) {
   showToast("Ajánlat törölve.");
 }
 
-function printQuote(id) {
+function printQuote(id, mode = "customer") {
   if (id) ui.selectedQuoteId = id;
+  ui.printMode = mode === "internal" ? "internal" : "customer";
   render();
+  document.body.classList.toggle("print-internal", ui.printMode === "internal");
+  document.body.classList.toggle("print-customer", ui.printMode !== "internal");
   window.setTimeout(() => window.print(), 0);
+}
+
+function clearPrintMode() {
+  document.body.classList.remove("print-internal", "print-customer");
+  ui.printMode = "customer";
 }
 
 function saveItem() {
@@ -2798,20 +2819,12 @@ function importBackup(file) {
 }
 
 function calcQuote(quote) {
-  const totals = quote.items.reduce((acc, item) => {
-    const calc = calcItem(item, quote);
-    acc.cost += calc.cost;
-    acc.net += calc.net;
-    acc.vatAmount += calc.vatAmount;
-    acc.gross += calc.gross;
-    return acc;
-  }, { cost: 0, net: 0, vatAmount: 0, gross: 0 });
-  return totals;
+  return pricing.summarizeQuote(quote.items.map((item) => calcItem(item, quote)));
 }
 
 function getVatRate(quote = getSelectedQuote()) {
   const value = quote?.vat ?? state.settings.vat ?? 0;
-  return String(value).toUpperCase() === "FAD" ? 0 : Number(value || 0);
+  return pricing.getVatRate(value);
 }
 
 function vatLabel(quote = getSelectedQuote()) {
@@ -2840,15 +2853,12 @@ function calcItem(rawItem, quote = getSelectedQuote()) {
   const accessoriesCost = shutterCost + mosquitoCost;
   const installationCost = installCost + shutterInstallCost + mosquitoInstallCost;
   const unitCost = base + colorCost + glassCost + extensionCost + accessoriesCost + installationCost;
-  const cost = unitCost * item.quantity;
-  const net = cost * (1 + Number(quote?.margin || state.settings.defaultMargin || 0) / 100);
-  const vatAmount = net * (getVatRate(quote) / 100);
-  const gross = net + vatAmount;
+  const totals = pricing.calculateLineTotals(unitCost, item.quantity, quotePricingOptions(quote));
   return {
-    cost,
-    net,
-    vatAmount,
-    gross,
+    cost: totals.cost,
+    net: totals.net,
+    vatAmount: totals.vatAmount,
+    gross: totals.gross,
     unitCost,
     usedWidth: matrix.usedWidth,
     usedHeight: matrix.usedHeight,
@@ -2916,15 +2926,12 @@ function calcInteriorDoorItem(item, quote = getSelectedQuote()) {
   const lockCost = Number(lock?.price || 0);
   const installCost = calcAccessory(item, item.installId);
   const unitCost = base + frameCost + handleCost + lockCost + installCost;
-  const cost = unitCost * item.quantity;
-  const net = cost * (1 + Number(quote?.margin || state.settings.defaultMargin || 0) / 100);
-  const vatAmount = net * (getVatRate(quote) / 100);
-  const gross = net + vatAmount;
+  const totals = pricing.calculateLineTotals(unitCost, item.quantity, quotePricingOptions(quote));
   return {
-    cost,
-    net,
-    vatAmount,
-    gross,
+    cost: totals.cost,
+    net: totals.net,
+    vatAmount: totals.vatAmount,
+    gross: totals.gross,
     unitCost,
     usedWidth: item.width,
     usedHeight: item.height,
@@ -2947,14 +2954,11 @@ function calcInteriorDoorItem(item, quote = getSelectedQuote()) {
 }
 
 function calcInteriorCustomFrameCost(item, model, finish) {
-  if (!item.interiorCustomFrame || !model?.customFrameEnabled) return 0;
-  const included = interiorIncludedFrameCm(model, finish.id);
-  const extraCm = Math.max(0, Number(item.interiorFrameDepthCm || 0) - included);
-  return extraCm * Number(model.customFrameSurchargePerCm || 0);
+  return pricing.calcInteriorCustomFrameCost(item, model, finish.id);
 }
 
 function interiorIncludedFrameCm(model, finishId) {
-  return Number(finishId === "cpl" ? model?.cplIncludedFrameCm : model?.decorIncludedFrameCm) || 0;
+  return pricing.interiorIncludedFrameCm(model, finishId);
 }
 
 function getMatrixPrice(profileId, productTypeId, width, height) {
@@ -2965,64 +2969,41 @@ function getMatrixPrice(profileId, productTypeId, width, height) {
   if (!state.catalog.matrices[key]) state.catalog.matrices[key] = createMatrix(profile, type);
   const matrix = state.catalog.matrices[key];
   matrix.blocked = matrix.blocked || {};
-  const usedWidth = nearestCeil(matrix.widths, Number(width || 0));
-  const usedHeight = nearestCeil(matrix.heights, Number(height || 0));
-  const cellKey = `${usedWidth}x${usedHeight}`;
-  const blocked = Boolean(matrix.blocked[cellKey]);
-  const price = blocked ? 0 : Number(matrix.prices[cellKey] || 0);
-  const rounded = usedWidth !== Number(width) || usedHeight !== Number(height);
-  return {
-    price,
-    usedWidth,
-    usedHeight,
-    blocked,
-    note: blocked ? "Nem gyártható méret" : (rounded ? "100 mm raszterre kerekítve" : "Pontos mátrix cella")
-  };
+  return pricing.resolveMatrixCell(matrix, width, height);
 }
 
 function nearestCeil(values, target) {
-  return values.find((value) => value >= target) || values[values.length - 1];
+  return pricing.nearestCeil(values, target);
 }
 
 function percentOrFixed(base, option, item) {
-  if (!option) return 0;
-  if (option.type === "fixed") return Number(option.value || 0);
-  if (option.type === "area") return areaM2(item) * Number(option.value || 0);
-  return base * (Number(option.value || 0) / 100);
+  return pricing.percentOrFixed(base, option, item);
 }
 
 function calcColorCost(base, color, item) {
-  if (!color) return 0;
-  const value = item.colorMode === "both" ? color.bothValue : color.outsideValue;
-  if (color.type === "fixed") return Number(value || 0);
-  return base * (Number(value || 0) / 100);
+  return pricing.calcColorCost(base, color, item);
 }
 
 function calcExtension(item) {
   if (!item.extensionMm) return 0;
   const ext = state.catalog.extensions.find((row) => String(row.mm) === String(item.extensionMm));
-  if (!ext) return 0;
-  const sides = item.extensionSides || {};
-  const widthM = Number(item.width || 0) / 1000;
-  const heightM = Number(item.height || 0) / 1000;
-  const length = (sides.left ? heightM : 0) + (sides.right ? heightM : 0) + (sides.top ? widthM : 0) + (sides.bottom ? widthM : 0);
-  return length * Number(ext.pricePerM || 0);
+  return pricing.calcExtension(item, ext);
 }
 
 function calcAccessory(item, accessoryId) {
   const accessory = state.catalog.accessories.find((row) => row.id === accessoryId);
-  if (!accessory) return 0;
-  const widthM = Number(item.width || 0) / 1000;
-  const perimeterM = ((Number(item.width || 0) + Number(item.height || 0)) * 2) / 1000;
-  const price = Number(accessory.price || 0);
-  if (accessory.pricing === "width") return widthM * price;
-  if (accessory.pricing === "area") return areaM2(item) * price;
-  if (accessory.pricing === "perimeter") return perimeterM * price;
-  return price;
+  return pricing.calcAccessory(item, accessory);
 }
 
 function areaM2(item) {
-  return (Number(item.width || 0) * Number(item.height || 0)) / 1000000;
+  return pricing.areaM2(item);
+}
+
+function quotePricingOptions(quote = getSelectedQuote()) {
+  return {
+    margin: quote?.margin ?? state.settings.defaultMargin ?? 0,
+    vat: quote?.vat ?? state.settings.vat ?? 0
+  };
 }
 
 function accessoriesBy(category) {
@@ -3168,7 +3149,8 @@ function accessoryLine(item, quote, calc = calcItem(item, quote)) {
 }
 
 function accessoryCostLines(item, quote, calc) {
-  const multiplier = (1 + Number(quote?.margin || state.settings.defaultMargin || 0) / 100) * Number(item.quantity || 1);
+  const margin = quote?.margin ?? state.settings.defaultMargin ?? 0;
+  const quantity = Number(item.quantity || 1);
   const lines = [];
   const entries = [
     [item.shutterId, "Redőny", calc.parts.shutter],
@@ -3179,7 +3161,9 @@ function accessoryCostLines(item, quote, calc) {
   ];
   entries.forEach(([id, fallback, cost]) => {
     const accessory = state.catalog.accessories.find((row) => row.id === id);
-    if (accessory && Number(cost || 0) > 0) lines.push({ label: `${fallback} - ${accessory.name}`, net: Number(cost || 0) * multiplier });
+    if (accessory && Number(cost || 0) > 0) {
+      lines.push({ label: `${fallback} - ${accessory.name}`, net: pricing.applyMargin(Number(cost || 0) * quantity, margin) });
+    }
   });
   return lines;
 }

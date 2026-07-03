@@ -55,4 +55,4 @@ Optional tenant fields:
 
 ## Current Gap
 
-The current prototype still reads and writes local state directly in `app.js`. Adapter extraction belongs after the first Electron shell and before full CRM preparation.
+The current prototype still reads and writes local state directly in `src/renderer/app.js`. Adapter extraction belongs after the first Electron shell and before full CRM preparation.
