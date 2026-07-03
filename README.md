@@ -74,6 +74,7 @@ Ez egy helyi Windows ajanlatkeszito app nyilaszarokhoz. A jelenlegi verzio meg p
 - [Roadmap](docs/ROADMAP.md)
 - [Deployment](docs/DEPLOYMENT.md)
 - [Security](docs/SECURITY.md)
+- [QA notes](docs/QA.md)
 - [CRM handoff](docs/CRM_HANDOFF.md)
 - [GitHub workflow](docs/GITHUB-WORKFLOW.md)
 - [Development decisions](docs/DECISIONS.md)

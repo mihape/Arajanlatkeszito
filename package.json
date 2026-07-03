@@ -2,12 +2,14 @@
   "name": "nyilaszaro-ajanlatkeszito",
   "version": "0.1.0",
   "private": true,
+  "author": "mihape",
   "description": "Helyi adatbazisu nyilaszaros ajanlatkeszito Windows/Electron app.",
   "main": "src/main/main.js",
   "scripts": {
     "dev": "electron .",
     "check": "node --check app.js && node --check src/main/main.js && node --check src/preload/preload.js",
-    "build:win": "electron-builder --win nsis"
+    "build:win": "electron-builder --win nsis",
+    "build:win:dir": "electron-builder --win dir"
   },
   "build": {
     "appId": "hu.nyilaszaro.ajanlatkeszito",

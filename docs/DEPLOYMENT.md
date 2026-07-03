@@ -36,6 +36,20 @@ Expected output:
 - installer under `dist/`
 - unpacked build artifacts under `dist/`
 
+## WSL/Linux Validation Build
+
+When running from WSL or Linux, the full NSIS installer step can require `wine`. To validate the Windows app package without creating the installer:
+
+```bash
+npm run build:win:dir
+```
+
+This should produce `dist/win-unpacked/`.
+
+Current WSL note: in the 2026-07-03 local validation, `dist/win-unpacked/Nyilaszaro Ajanlatkeszito.exe` was produced, but the `build:win:dir` command did not exit within 300 seconds. Treat WSL artifacts as partial validation only.
+
+The GitHub Actions workflow runs on `windows-latest`, so the tagged release installer path must be validated there instead of relying on WSL.
+
 ## Release Mode
 
 Packaged builds should start in release mode. Release mode must not seed real or demo customers/quotes by default.

@@ -30,6 +30,8 @@ Git:
 - A jelenlegi projektfajlok elso commitra elokeszitve.
 - GitHub repo letrehozva: `mihape/Arajanlatkeszito`.
 - Issue sablon, PR sablon es Windows build workflow elokeszites bekerult.
+- Helyi WSL builden a Windows unpacked csomagolasig eljutottunk; az NSIS installer `wine` hiany miatt WSL alatt nem futott vegig.
+- A `build:win:dir` WSL alatt letrehozta a Windows `.exe` artifactot, de 300 masodpercen belul nem lepett ki.
 
 ## Lefedett uzleti funkciok
 
@@ -95,6 +97,7 @@ Javasolt sorrend:
 - Nincs dontes, hogy egy gepes helyi adatbazis vagy kesobbi tobbgepes, kozos adatbazis legyen az elsodleges cel.
 - GitHub milestone-ok meg nincsenek letrehozva.
 - Demo installer kulon mod meg nincs megvalositva.
+- Teljes NSIS installer buildet GitHub Actions Windows runneren kell validalni.
 
 ## Hasznos kovetkezo funkcio otletek
 

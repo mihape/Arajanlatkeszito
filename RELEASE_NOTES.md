@@ -22,3 +22,4 @@ Known limitations:
 - no SQLite database yet
 - PDF export still uses print layout
 - CRM adapters are documented but not implemented
+- local WSL installer builds need `wine`; use `npm run build:win:dir` for WSL package validation
