@@ -44,6 +44,7 @@ const navItems = [
 
 const app = document.getElementById("app");
 let state = loadState();
+let desktopSaveTimer = null;
 let ui = {
   view: "quotes",
   selectedQuoteId: state.quotes[0]?.id || "",
@@ -66,6 +67,7 @@ let ui = {
 };
 
 render();
+hydrateStateFromDesktopStorage();
 
 document.addEventListener("click", handleClick);
 document.addEventListener("input", handleInput);
@@ -215,6 +217,60 @@ function normalizeInteriorDoors(raw = {}, seed) {
 
 function saveState() {
   localStorage.setItem(DB_KEY, JSON.stringify(state));
+  scheduleDesktopSave();
+}
+
+async function hydrateStateFromDesktopStorage() {
+  const dataApi = window.nyilaszaroApp?.data;
+  if (!dataApi?.loadState) return;
+  try {
+    const result = await dataApi.loadState();
+    if (!result?.state) {
+      scheduleDesktopSave();
+      return;
+    }
+    state = normalizeState(result.state, createSeedState());
+    resetUiAfterStateHydration();
+    render();
+  } catch (error) {
+    console.warn("Nem sikerült betölteni a SQLite adatbázist.", error);
+  }
+}
+
+function resetUiAfterStateHydration() {
+  ui.selectedQuoteId = state.quotes[0]?.id || "";
+  ui.selectedItemId = "";
+  ui.selectedCustomerId = state.customers[0]?.id || "";
+  ui.selectedProfileId = state.catalog.profiles[0]?.id || "";
+  ui.selectedMatrixProfileId = state.catalog.profiles[0]?.id || "";
+  ui.selectedMatrixProductType = state.catalog.exteriorOpenings?.[0]?.id || "tilt-turn";
+  ui.selectedOpeningImageId = state.catalog.exteriorOpenings?.[0]?.id || "tilt-turn";
+  ui.selectedInteriorManufacturerId = state.catalog.interiorDoors?.manufacturers?.[0]?.id || "";
+  ui.selectedInteriorModelId = state.catalog.interiorDoors?.models?.[0]?.id || "";
+  ui.selectedInteriorImageColorId = state.catalog.interiorDoors?.colors?.[0]?.id || "";
+  ui.itemDraft = createDefaultItem(state);
+  ui.customerDraft = createCustomerDraft();
+  ui.profileDraft = createProfileDraft();
+  ui.interiorManufacturerDraft = createInteriorManufacturerDraft(state.catalog.interiorDoors?.manufacturers?.[0]);
+  ui.interiorModelDraft = createInteriorModelDraft(state.catalog.interiorDoors?.models?.[0]);
+}
+
+function scheduleDesktopSave() {
+  const dataApi = window.nyilaszaroApp?.data;
+  if (!dataApi?.saveState) return;
+  window.clearTimeout(desktopSaveTimer);
+  desktopSaveTimer = window.setTimeout(() => {
+    dataApi.saveState(clone(state)).catch((error) => {
+      console.warn("Nem sikerült menteni a SQLite adatbázist.", error);
+    });
+  }, 250);
+}
+
+async function saveStateToDesktopNow() {
+  const dataApi = window.nyilaszaroApp?.data;
+  if (!dataApi?.saveState) return null;
+  window.clearTimeout(desktopSaveTimer);
+  return dataApi.saveState(clone(state));
 }
 
 function createSeedState() {
@@ -2810,6 +2866,7 @@ function importBackup(file) {
       ui.selectedQuoteId = state.quotes[0]?.id || "";
       ui.itemDraft = createDefaultItem(state);
       saveState();
+      saveStateToDesktopNow();
       showToast("Biztonsági mentés visszatöltve.");
     } catch (error) {
       showToast("Nem olvasható a JSON mentés.");

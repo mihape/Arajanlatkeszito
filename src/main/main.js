@@ -1,9 +1,9 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const { DATA_CHANNELS } = require("../shared/storage-contract");
-const { createPendingSqliteAdapter } = require("./database");
+const { createSqliteAdapter } = require("./database");
 
-const dataAdapter = createPendingSqliteAdapter();
+let dataAdapter;
 
 function createMainWindow() {
   const appMode = getAppMode();
@@ -28,9 +28,14 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
+  dataAdapter = createSqliteAdapter({ dataDir: app.getPath("userData") });
   ipcMain.handle("app:get-version", () => app.getVersion());
   ipcMain.handle("app:get-mode", () => getAppMode());
   ipcMain.handle(DATA_CHANNELS.GET_STATUS, () => dataAdapter.getStatus());
+  ipcMain.handle(DATA_CHANNELS.LOAD_STATE, () => dataAdapter.loadState());
+  ipcMain.handle(DATA_CHANNELS.SAVE_STATE, (_event, state) => dataAdapter.saveState(state));
+  ipcMain.handle(DATA_CHANNELS.IMPORT_STATE, (_event, state) => dataAdapter.importState(state));
+  ipcMain.handle(DATA_CHANNELS.EXPORT_STATE, () => dataAdapter.exportState());
   createMainWindow();
 
   app.on("activate", () => {

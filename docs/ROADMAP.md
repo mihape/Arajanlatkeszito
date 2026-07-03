@@ -51,7 +51,9 @@ Aktualis elokeszites:
 
 - `src/shared/sqlite-schema.js`
 - `src/shared/storage-contract.js`
+- `src/main/database.js`
 - `docs/SQLITE_MIGRATION.md`
+- Electronban elso SQLite full-state mentes/betoltes preload API-n keresztul.
 
 ## 3. fazis - Kalkulacio es PDF stabilizalas
 

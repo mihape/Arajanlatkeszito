@@ -39,7 +39,11 @@ const SYNC_STATUS = Object.freeze({
 });
 
 const DATA_CHANNELS = Object.freeze({
-  GET_STATUS: "data:get-status"
+  GET_STATUS: "data:get-status",
+  LOAD_STATE: "data:load-state",
+  SAVE_STATE: "data:save-state",
+  IMPORT_STATE: "data:import-state",
+  EXPORT_STATE: "data:export-state"
 });
 
 module.exports = {

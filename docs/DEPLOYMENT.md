@@ -26,6 +26,9 @@ Current check scope:
 - Electron preload syntax
 - shared pricing/schema modules
 - pricing calculation unit tests
+- SQLite adapter persistence test
+
+SQLite note: the current runtime bridge uses Node/Electron `node:sqlite`. In the current local Node version this prints an experimental warning during tests, but it avoids native package rebuilds and keeps the Windows installer path simpler.
 
 ## Windows Build
 

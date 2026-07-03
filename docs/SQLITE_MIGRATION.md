@@ -1,6 +1,6 @@
 # SQLite migration plan
 
-Status: prepared boundary. The app still stores active data in renderer `localStorage`; SQLite runtime wiring is the next implementation step.
+Status: first runtime bridge implemented. Electron can now create a local `app-state.sqlite` database in the user app data folder, apply the v1 schema, and persist the full app-state JSON through preload IPC. The renderer still keeps `localStorage` as browser-preview fallback while SQLite is phased in.
 
 ## Target
 
@@ -69,8 +69,18 @@ Core tables:
 
 ## Preload boundary
 
-The first IPC boundary is intentionally small:
+The first IPC boundary supports:
 
 - `window.nyilaszaroApp.data.getStatus()`
+- `window.nyilaszaroApp.data.loadState()`
+- `window.nyilaszaroApp.data.saveState(state)`
+- `window.nyilaszaroApp.data.importState(state)`
+- `window.nyilaszaroApp.data.exportState()`
 
-This proves the Electron main/preload route for storage metadata without forcing an unfinished SQLite runtime into production. The next step is to add list/get/save/delete methods behind this same boundary.
+The current implementation stores one normalized full-state JSON document in the SQLite `settings` table under `app_state`. This is a deliberate bridge step: it proves durable app-data storage in SQLite without rewriting every renderer mutation at once.
+
+Next implementation step:
+
+- persist/import individual normalized tables from the existing JSON shape
+- move quote/customer/catalog CRUD behind preload methods
+- keep JSON backup as an export format generated from SQLite

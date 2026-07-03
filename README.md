@@ -17,6 +17,7 @@ This repository currently contains:
 - interior door model pricing
 - accessories, installation items, VAT, margin, and print-friendly quote output
 - tested shared pricing calculations for matrix rounding, VAT, margin, accessories, and custom interior frames
+- initial Electron preload SQLite bridge for durable local app-state storage
 - documentation for architecture, roadmap, GitHub workflow, and CRM direction
 
 ## Electron Development
