@@ -174,3 +174,43 @@ Artifact verification:
 Follow-up:
 
 - workflow artifact glob was narrowed after this run so future artifacts and release assets include only top-level installer `.exe` files plus `CHECKSUMS.txt`
+
+## 2026-07-03 GitHub Actions final artifact validation
+
+Run:
+
+- `28646967700`
+
+Commit:
+
+- `4d07d64`
+
+Result:
+
+- `npm ci` passed
+- `npm run check` passed
+- Windows installer build passed
+- checksum generation passed
+- artifact upload passed
+
+Downloaded artifact contents:
+
+- `Nyilaszaro Ajanlatkeszito Setup 0.1.0.exe`
+- `CHECKSUMS.txt`
+
+Installer file check:
+
+```text
+PE32 executable (GUI) Intel 80386, for MS Windows, Nullsoft Installer self-extracting archive
+```
+
+Checksum file:
+
+```text
+4734D892943F4B0F17D343B454F84259CD09DD454C8FC1BA1EFA95B055CB7820  Nyilaszaro Ajanlatkeszito Setup 0.1.0.exe
+```
+
+Conclusion:
+
+- Windows CI installer build and artifact upload are validated on GitHub Actions.
+- The release upload path still needs one tagged `v*` release validation.
