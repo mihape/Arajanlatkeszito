@@ -71,7 +71,7 @@ Aktualis atmeneti allapot: az Electron `main` es `preload` reteg mar a `src/` ma
 
 ## Release es demo mod
 
-Az atadasi doksi szerint a publikus repo es a release build nem tartalmazhat valos uzleti adatot. A jelenlegi irany:
+A publikus repo es a release build nem tartalmazhat valos uzleti adatot. A jelenlegi irany:
 
 - fejlesztoi Electron inditas: demo mod, fiktiv mintaadatokkal
 - csomagolt Electron app: release mod, ures ugyfel/ajanlat indulassal

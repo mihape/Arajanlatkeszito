@@ -87,5 +87,5 @@ Minden PR tartalmazza:
 - Ellenorizni kell, hogy minden mintaadat fiktiv.
 - Futtatni kell: `npm run check`.
 - Nem lehet staged allapotban `.db`, `.sqlite`, backup JSON, importalt arlista vagy exportalt PDF.
-- Az `ARAJANLAT_KESZITO_HANDOFF.md` publikalhatosagat kulon ellenorizni kell.
+- Belso atadasi dokumentum nem kerulhet a publikus repoba.
 - A repo lathatosagat es nevet a tulajdonossal egyeztetni kell.

@@ -68,13 +68,12 @@ Ez egy helyi Windows ajanlatkeszito app nyilaszarokhoz. A jelenlegi verzio meg p
 
 ## Documentation
 
-- [Original handoff](ARAJANLAT_KESZITO_HANDOFF.md)
 - [Project audit](docs/PROJECT-AUDIT.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Deployment](docs/DEPLOYMENT.md)
 - [Security](docs/SECURITY.md)
 - [QA notes](docs/QA.md)
-- [CRM handoff](docs/CRM_HANDOFF.md)
+- [CRM integration](docs/CRM_INTEGRATION.md)
 - [GitHub workflow](docs/GITHUB-WORKFLOW.md)
 - [Development decisions](docs/DECISIONS.md)

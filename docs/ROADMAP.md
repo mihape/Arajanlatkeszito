@@ -9,7 +9,7 @@ Cel: a jelenlegi mukodo allapot biztonsagosan visszakeresheto legyen.
 - `.gitignore` letrehozasa.
 - Electron projektvaz elokeszitese.
 - GitHub issue es PR sablonok letrehozasa.
-- Deployment, security es CRM handoff dokumentacio.
+- Deployment, security es CRM integracios dokumentacio.
 - Windows build workflow draft.
 - Elso Git commit.
 - GitHub repo letrehozasa.

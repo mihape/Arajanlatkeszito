@@ -8,10 +8,9 @@ Datum: 2026-07-03
 - `index.html`
 - `app.js`
 - `styles.css`
-- `ARAJANLAT_KESZITO_HANDOFF.md`
 - Git munkafa allapota
 
-Megjegyzes: az atadasi dokumentum szerint ez kulon termek/repo legyen, ne HR modul. A cel helyi Windows app, publikus repohoz biztonsagos demo adatokkal, installer/release folyamattal es kesobbi CRM adapter hatarokkal.
+Megjegyzes: a projekt celja kulon termek/repo, nem HR modul. A cel helyi Windows app, publikus repohoz biztonsagos demo adatokkal, installer/release folyamattal es kesobbi CRM adapter hatarokkal.
 
 ## Jelenlegi allapot
 
@@ -59,7 +58,7 @@ Git:
 - Helyi, Windowsos Electron app.
 - Publikus repohoz nincs realis ceges/ugyfel/szallitoi adat.
 - README angol elso resszel es magyar osszefoglaloval.
-- `docs/ARCHITECTURE.md`, `docs/DEPLOYMENT.md`, `docs/SECURITY.md`, CRM handoff doksi.
+- `docs/ARCHITECTURE.md`, `docs/DEPLOYMENT.md`, `docs/SECURITY.md`, CRM integracios terv.
 - `CHANGELOG.md`, `RELEASE_NOTES.md`.
 - GitHub Actions Windows build workflow.
 - Release es demo build modok.

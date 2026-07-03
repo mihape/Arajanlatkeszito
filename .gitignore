@@ -23,6 +23,10 @@ yarn-error.log*
 *.db
 nyilaszaro-ajanlatkeszito-mentes-*.json
 
+# Internal transfer notes
+*HANDOFF*.md
+*handoff*.md
+
 # OS/editor noise
 .DS_Store
 Thumbs.db
