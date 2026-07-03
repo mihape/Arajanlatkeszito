@@ -24,3 +24,4 @@ Known limitations:
 - CRM adapters are documented but not implemented
 - local WSL installer builds need `wine`; use `npm run build:win:dir` for WSL package validation
 - CI Windows builds disable electron-builder implicit publishing and upload artifacts through the workflow
+- Windows workflow artifacts are limited to the installer executable and checksum file

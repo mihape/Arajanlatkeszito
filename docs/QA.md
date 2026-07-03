@@ -149,3 +149,28 @@ Fix applied:
 Next:
 
 - rerun `Build Windows` workflow on `main`
+
+## 2026-07-03 GitHub Actions success
+
+Run:
+
+- `28646666889`
+
+Result:
+
+- `npm ci` passed
+- `npm run check` passed
+- Windows installer build passed
+- checksum generation passed
+- artifact upload passed
+- artifact `nyilaszaro-windows-build` was created
+
+Artifact verification:
+
+- `Nyilaszaro Ajanlatkeszito Setup 0.1.0.exe`
+- `CHECKSUMS.txt`
+- downloaded artifact included a valid NSIS installer executable
+
+Follow-up:
+
+- workflow artifact glob was narrowed after this run so future artifacts and release assets include only top-level installer `.exe` files plus `CHECKSUMS.txt`

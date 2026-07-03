@@ -52,6 +52,8 @@ The GitHub Actions workflow runs on `windows-latest`, so the tagged release inst
 
 CI note: `npm run build:win` passes `--publish never`; GitHub release uploads are handled by the explicit `softprops/action-gh-release` step on `v*` tags.
 
+Workflow artifact note: the Windows workflow uploads only top-level installer `.exe` files from `dist/` plus `CHECKSUMS.txt`; unpacked internal Electron executables are intentionally not release assets.
+
 ## Release Mode
 
 Packaged builds should start in release mode. Release mode must not seed real or demo customers/quotes by default.
