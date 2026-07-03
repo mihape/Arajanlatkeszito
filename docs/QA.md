@@ -127,3 +127,25 @@ Screenshot:
 - Electron window startup needs Windows validation
 - NSIS installer needs GitHub Actions Windows validation
 - PDF layout should still be visually checked after Electron `printToPDF` is implemented
+
+## 2026-07-03 GitHub Actions attempt
+
+Run:
+
+- `28646511245`
+
+Result:
+
+- dependency install passed
+- `npm run check` passed
+- Windows unpacked app and NSIS installer were built
+- workflow failed because electron-builder tried implicit GitHub publishing in CI without `GH_TOKEN`
+
+Fix applied:
+
+- changed `build:win` to `electron-builder --win nsis --publish never`
+- changed GitHub Actions dependency install from `npm install` to `npm ci`
+
+Next:
+
+- rerun `Build Windows` workflow on `main`

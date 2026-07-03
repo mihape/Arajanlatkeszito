@@ -50,6 +50,8 @@ Current WSL note: in the 2026-07-03 local validation, `dist/win-unpacked/Nyilasz
 
 The GitHub Actions workflow runs on `windows-latest`, so the tagged release installer path must be validated there instead of relying on WSL.
 
+CI note: `npm run build:win` passes `--publish never`; GitHub release uploads are handled by the explicit `softprops/action-gh-release` step on `v*` tags.
+
 ## Release Mode
 
 Packaged builds should start in release mode. Release mode must not seed real or demo customers/quotes by default.
