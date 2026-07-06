@@ -6,7 +6,7 @@ Prepare the standalone quote builder so it can later connect to a CRM without re
 
 ## Adapter Boundaries
 
-These boundaries are not fully implemented yet, but they are the target architecture.
+These boundaries are represented by `src/shared/crm-contract.js` as a stable contract. The current app still runs local-first; the contract prevents future CRM code from leaking directly into renderer pricing or UI logic.
 
 - `authTenantAdapter`: current company, organization, office, and future user context.
 - `partnerAdapter`: local saved customers now, CRM clients later.
@@ -15,6 +15,19 @@ These boundaries are not fully implemented yet, but they are the target architec
 - `quoteStorageAdapter`: local SQLite now, CRM quote endpoint later.
 - `exportAdapter`: local PDF/JSON export now, CRM document service later.
 - `moduleManifestAdapter`: exposes app capabilities for future CRM host integration.
+
+## Current Contract Module
+
+`src/shared/crm-contract.js` defines:
+
+- adapter names
+- supported capability names
+- sync status values: `local`, `pending`, `synced`, `failed`
+- `createCrmManifest()`
+- `createSyncEnvelope()`
+- immutable helper functions for pending/succeeded/failed sync states
+
+The contract is intentionally provider-neutral. A future CRM connector should translate this manifest/envelope shape into the actual CRM API shape.
 
 ## Local-To-CRM Mapping
 
@@ -55,4 +68,4 @@ Optional tenant fields:
 
 ## Current Gap
 
-The current prototype still reads and writes local state directly in `src/renderer/app.js`. Adapter extraction belongs after the first Electron shell and before full CRM preparation.
+The current app still reads most catalog and quote details through local renderer state, with customer/quote persistence and backups already moving behind preload/SQLite APIs. CRM integration itself is not implemented yet; the next CRM step is to build a provider-neutral sync queue adapter around the existing SQLite `sync_queue` table and the shared CRM contract.

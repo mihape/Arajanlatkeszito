@@ -180,6 +180,22 @@ Validated:
 npm run check
 ```
 
+## 2026-07-06 CRM contract check
+
+Implemented:
+
+- `src/shared/crm-contract.js`
+- adapter boundary names
+- capability manifest
+- sync envelope shape
+- immutable sync status helpers
+
+Validated:
+
+```bash
+npm run check
+```
+
 ## 2026-07-03 GitHub Actions attempt
 
 Run:

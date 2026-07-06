@@ -124,6 +124,12 @@ Javasolt mezok:
 - `synced_at`: utolso sikeres CRM szinkron.
 - `sync_status`: pending, synced, failed.
 
+Elso kodszintu szerzodes:
+
+- `src/shared/crm-contract.js`
+- `tests/crm-contract.test.js`
+- provider-semleges manifest, capability lista es sync envelope
+
 Javasolt szinkron esemenyek:
 
 - ugyfel letrehozva/modositva

@@ -116,6 +116,7 @@ Cel: kesobbi CRM-kapcsolat ugy, hogy az app helyben tovabbra is hasznalhato mara
 - Kulso azonosito mezok.
 - Ugyfel es ajanlat export/import.
 - Hibakezeles sikertelen szinkronnal.
+- Elso provider-semleges CRM contract modul: manifest, capability-k, sync envelope es sync status helper fuggvenyek.
 
 Elfogadasi feltetel:
 
