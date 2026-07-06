@@ -95,11 +95,12 @@ function createSqliteAdapter(options = {}) {
     },
 
     loadState() {
+      const normalizedState = loadNormalizedState(db);
       return {
-        state: loadNormalizedState(db) || loadAppState(db),
+        state: normalizedState || loadAppState(db),
         path: dbPath,
         schemaVersion: SCHEMA_VERSION,
-        normalized: Boolean(loadNormalizedState(db))
+        normalized: Boolean(normalizedState)
       };
     },
 
@@ -116,19 +117,18 @@ function createSqliteAdapter(options = {}) {
     importState(state) {
       persistState(db, state);
       return {
-        ok: true,
-        normalized: true,
-        path: dbPath,
+        ...mutationResult(loadNormalizedState(db) || loadAppState(db), dbPath),
         importedAt: new Date().toISOString()
       };
     },
 
     exportState() {
+      const normalizedState = loadNormalizedState(db);
       return {
-        state: loadNormalizedState(db) || loadAppState(db),
+        state: normalizedState || loadAppState(db),
         path: dbPath,
         exportedAt: new Date().toISOString(),
-        normalized: Boolean(loadNormalizedState(db))
+        normalized: Boolean(normalizedState)
       };
     },
 

@@ -172,3 +172,64 @@ test("SQLite adapter exposes customer and quote CRUD mutations", () => {
   assert.equal(result.state.customers.length, 0);
   assert.equal(adapter.getStatus().counts.customers, 0);
 });
+
+test("SQLite adapter exports and imports backups through normalized tables", () => {
+  const tmpRoot = path.join(root, ".tmp-tests");
+  fs.mkdirSync(tmpRoot, { recursive: true });
+  const dataDir = fs.mkdtempSync(path.join(tmpRoot, "nyilaszaro-backup-db-"));
+  const adapter = createSqliteAdapter({ dataDir, fileName: "backup.sqlite" });
+
+  const firstState = {
+    settings: { companyName: "Elso ceg" },
+    customers: [{ id: "customer-1", name: "Elso ugyfel" }],
+    catalog: {
+      profiles: [{ id: "profile-1", manufacturer: "Demo", name: "Profil A", uf: 1.1, ug2: 1, ug3: 0.6 }],
+      exteriorOpenings: [{ id: "opening-1", name: "KFNY ablak", productTypeId: "window" }],
+      matrices: {
+        "profile-1__opening-1": {
+          widths: [1000],
+          heights: [1200],
+          prices: { "1000x1200": 50000 },
+          blocked: {}
+        }
+      },
+      colors: [],
+      glasses: [],
+      extensions: [],
+      accessories: [],
+      interiorDoors: { manufacturers: [], models: [], colors: [], frames: [], handles: [], locks: [] }
+    },
+    openingImages: {},
+    quotes: [{ id: "quote-1", number: "AJ-1", customerId: "customer-1", status: "Vazlat", items: [] }]
+  };
+
+  const importedState = {
+    ...firstState,
+    settings: { companyName: "Importalt ceg" },
+    customers: [{ id: "customer-2", name: "Importalt ugyfel" }],
+    quotes: [{
+      id: "quote-2",
+      number: "AJ-2",
+      customerId: "customer-2",
+      status: "Elfogadva",
+      items: [{ id: "item-2", productTypeId: "window", width: 1000, height: 1200, quantity: 3 }]
+    }]
+  };
+
+  adapter.saveState(firstState);
+  assert.equal(adapter.exportState().state.customers[0].name, "Elso ugyfel");
+
+  const importResult = adapter.importState(importedState);
+  assert.equal(importResult.ok, true);
+  assert.equal(importResult.state.settings.companyName, "Importalt ceg");
+  assert.equal(importResult.state.customers[0].id, "customer-2");
+  assert.equal(importResult.state.quotes[0].items[0].quantity, 3);
+
+  const exported = adapter.exportState();
+  assert.equal(exported.normalized, true);
+  assert.equal(exported.state.customers.length, 1);
+  assert.equal(exported.state.customers[0].name, "Importalt ugyfel");
+  assert.equal(adapter.getStatus().counts.customers, 1);
+  assert.equal(adapter.getStatus().counts.quotes, 1);
+  assert.equal(adapter.getStatus().counts.quote_items, 1);
+});

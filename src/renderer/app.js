@@ -2917,8 +2917,18 @@ function removeInteriorImage() {
   showToast("Beltéri ajtó kép törölve.");
 }
 
-function exportBackup() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+async function exportBackup() {
+  const dataApi = window.nyilaszaroApp?.data;
+  let backupState = state;
+  if (dataApi?.exportState) {
+    try {
+      const result = await dataApi.exportState();
+      if (result?.state) backupState = normalizeState(result.state, createSeedState());
+    } catch (error) {
+      console.warn("Nem sikerült SQLite-ból exportálni a mentést.", error);
+    }
+  }
+  const blob = new Blob([JSON.stringify(backupState, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -2931,14 +2941,25 @@ function exportBackup() {
 
 function importBackup(file) {
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const imported = JSON.parse(reader.result);
-      state = normalizeState(imported, createSeedState());
-      ui.selectedQuoteId = state.quotes[0]?.id || "";
-      ui.itemDraft = createDefaultItem(state);
-      saveState();
-      saveStateToDesktopNow();
+      const normalized = normalizeState(imported, createSeedState());
+      const dataApi = window.nyilaszaroApp?.data;
+      if (dataApi?.importState) {
+        const result = await dataApi.importState(clone(normalized));
+        if (syncStateFromMutation(result, { selectedQuoteId: result?.state?.quotes?.[0]?.id || "", view: ui.view })) {
+          localStorage.setItem(DB_KEY, JSON.stringify(state));
+        } else {
+          state = normalized;
+          resetUiAfterStateHydration();
+          saveState();
+        }
+      } else {
+        state = normalized;
+        resetUiAfterStateHydration();
+        saveState();
+      }
       showToast("Biztonsági mentés visszatöltve.");
     } catch (error) {
       showToast("Nem olvasható a JSON mentés.");

@@ -1,6 +1,6 @@
 # SQLite migration plan
 
-Status: first normalized runtime bridge implemented. Electron can now create a local `app-state.sqlite` database in the user app data folder, apply the v1 schema, persist the full app-state JSON through preload IPC, and mirror the main records into normalized SQLite tables. The renderer still keeps `localStorage` as browser-preview fallback while SQLite is phased in.
+Status: first normalized runtime bridge implemented. Electron can now create a local `app-state.sqlite` database in the user app data folder, apply the v1 schema, persist the full app-state JSON through preload IPC, mirror the main records into normalized SQLite tables, and generate/restore JSON backups through the SQLite adapter. The renderer still keeps `localStorage` as browser-preview fallback while SQLite is phased in.
 
 ## Target
 
@@ -65,7 +65,7 @@ Core tables:
 4. Import JSON rows into the schema above.
 5. Recalculate quote totals from imported rows and compare with the pre-migration JSON totals.
 6. Switch renderer reads and writes to preload data methods.
-7. Keep JSON backup export by reading from SQLite instead of from `localStorage`.
+7. Keep JSON backup export by reading from SQLite instead of from `localStorage`. Done for Electron runtime; browser preview keeps the in-memory/localStorage fallback.
 
 ## Preload boundary
 
@@ -95,8 +95,14 @@ Currently mirrored:
 - interior manufacturers, models, colors, frames, handles, locks
 - uploaded exterior/interior images as `item_images`
 
+Backup behavior:
+
+- Electron export uses `window.nyilaszaroApp.data.exportState()` and writes the normalized state rebuilt from SQLite tables.
+- Electron import parses the selected JSON file, normalizes it against the current seed state, calls `window.nyilaszaroApp.data.importState(state)`, then refreshes the renderer from the imported adapter response.
+- Browser preview export/import remains available without Electron by using the current renderer state and `localStorage`.
+
 Next implementation step:
 
 - move catalog CRUD behind preload methods
 - split customer and quote persistence into narrower table-level writes after the normalized state round-trip is stable
-- keep JSON backup as an export format generated from SQLite
+- keep expanding adapter-level tests around backup compatibility as schema versions grow
