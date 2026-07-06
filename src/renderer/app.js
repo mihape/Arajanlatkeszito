@@ -57,6 +57,8 @@ let ui = {
   selectedInteriorManufacturerId: state.catalog.interiorDoors?.manufacturers?.[0]?.id || "",
   selectedInteriorModelId: state.catalog.interiorDoors?.models?.[0]?.id || "",
   selectedInteriorImageColorId: state.catalog.interiorDoors?.colors?.[0]?.id || "",
+  quoteStatusFilter: "all",
+  quoteSearch: "",
   itemDraft: createDefaultItem(state),
   customerDraft: createCustomerDraft(),
   profileDraft: createProfileDraft(),
@@ -114,6 +116,10 @@ function showToast(message) {
   }, 2600);
 }
 
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function getAppMode() {
   try {
     const mode = new URLSearchParams(window.location.search).get("mode");
@@ -168,12 +174,25 @@ function normalizeState(raw, seed) {
   });
   merged.catalog.matrices = { ...merged.catalog.matrices, ...migratedMatrices };
   if (!merged.customers?.length) merged.customers = seed.customers;
-  merged.quotes = (merged.quotes || seed.quotes).map((quote) => ({
-    ...quote,
-    productionDeadline: quote.productionDeadline || seed.settings.defaultProductionDeadline || "6-8 hét"
-  }));
+  merged.quotes = (merged.quotes || seed.quotes).map((quote) => normalizeQuoteWorkflow(quote, seed));
   if (!merged.quotes?.length) merged.quotes = seed.quotes;
   return merged;
+}
+
+function normalizeQuoteWorkflow(quote, seed) {
+  const createdAt = quote.createdAt || new Date().toISOString().slice(0, 10);
+  const status = quote.status || "Vázlat";
+  return {
+    ...quote,
+    status,
+    createdAt,
+    updatedAt: quote.updatedAt || createdAt,
+    version: Number(quote.version || 1),
+    statusHistory: Array.isArray(quote.statusHistory) && quote.statusHistory.length
+      ? quote.statusHistory
+      : [{ status, at: createdAt, note: "Kezdő állapot" }],
+    productionDeadline: quote.productionDeadline || seed.settings.defaultProductionDeadline || "6-8 hét"
+  };
 }
 
 function normalizeColors(colors) {
@@ -366,6 +385,7 @@ function createSeedState() {
   });
 
   const demoMode = APP_MODE === "demo";
+  const createdAt = todayIso();
   const customers = demoMode ? [
     {
       id: "customer-demo-partner",
@@ -430,7 +450,10 @@ function createSeedState() {
         customerId: customers[0].id,
         projectAddress: "1111 Budapest, Példa utca 1.",
         status: "Vázlat",
-        createdAt: new Date().toISOString().slice(0, 10),
+        createdAt,
+        updatedAt: createdAt,
+        version: 1,
+        statusHistory: [{ status: "Vázlat", at: createdAt, note: "Kezdő állapot" }],
         productionDeadline: "6-8 hét",
         margin: 32,
         vat: 27,
@@ -976,6 +999,7 @@ function vatOptions() {
 
 function renderQuotesDashboard() {
   const metrics = quoteDashboardMetrics();
+  const filteredQuotes = getFilteredQuotes();
   return `
     <div class="workspace-main">
       <section class="dashboard-hero">
@@ -997,8 +1021,24 @@ function renderQuotesDashboard() {
         <div class="panel-header">
           <div>
             <h2 class="panel-title">Ajánlatok</h2>
-            <p class="panel-note">Kattints a Megnyitás gombra a részletes szerkesztőhöz.</p>
+            <p class="panel-note">Kattints a Megnyitás gombra a részletes szerkesztőhöz. Szűrt találat: ${filteredQuotes.length} db.</p>
           </div>
+        </div>
+        <div class="form-grid three" style="margin-bottom: 14px;">
+          <label>
+            Keresés
+            <input data-dashboard-search value="${esc(ui.quoteSearch)}" placeholder="Ajánlatszám, ügyfél, cím" />
+          </label>
+          <label>
+            Állapot
+            <select data-dashboard-status>
+              ${quoteStatusOptions().map((status) => `<option value="${esc(status.value)}" ${ui.quoteStatusFilter === status.value ? "selected" : ""}>${esc(status.label)}</option>`).join("")}
+            </select>
+          </label>
+          <label>
+            Rendezés
+            <input value="Legutóbb módosított elöl" disabled />
+          </label>
         </div>
         <div class="table-wrap">
           <table class="dashboard-table">
@@ -1007,7 +1047,9 @@ function renderQuotesDashboard() {
                 <th>Ajánlat</th>
                 <th>Ügyfél</th>
                 <th>Készült</th>
+                <th>Módosítva</th>
                 <th>Állapot</th>
+                <th>Verzió</th>
                 <th>Tételek</th>
                 <th>Határidő</th>
                 <th class="numeric">Nettó</th>
@@ -1016,7 +1058,7 @@ function renderQuotesDashboard() {
               </tr>
             </thead>
             <tbody>
-              ${state.quotes.map((quote) => renderDashboardQuoteRow(quote)).join("") || `<tr><td colspan="9"><div class="empty">Még nincs ajánlat.</div></td></tr>`}
+              ${filteredQuotes.map((quote) => renderDashboardQuoteRow(quote)).join("") || `<tr><td colspan="11"><div class="empty">${state.quotes.length ? "Nincs találat." : "Még nincs ajánlat."}</div></td></tr>`}
             </tbody>
           </table>
         </div>
@@ -1038,6 +1080,7 @@ function dashboardMetric(label, value, note) {
 function renderDashboardQuoteRow(quote) {
   const customer = getCustomer(quote.customerId);
   const totals = calcQuote(quote);
+  const latestStatus = quote.statusHistory?.[quote.statusHistory.length - 1];
   return `
     <tr>
       <td>
@@ -1046,7 +1089,12 @@ function renderDashboardQuoteRow(quote) {
       </td>
       <td>${esc(customer?.name || "Nincs ügyfél")}</td>
       <td>${esc(quote.createdAt || "-")}</td>
-      <td><span class="status-pill ${statusClass(quote.status)}">${esc(quote.status || "Vázlat")}</span></td>
+      <td>${esc(quote.updatedAt || quote.createdAt || "-")}</td>
+      <td>
+        <span class="status-pill ${statusClass(quote.status)}">${esc(quote.status || "Vázlat")}</span>
+        <div class="data-card-meta">${esc(latestStatus ? `${latestStatus.at} · ${latestStatus.note || latestStatus.status}` : "Nincs státusztörténet")}</div>
+      </td>
+      <td>v${number(quote.version || 1)}</td>
       <td>${quote.items.length} db</td>
       <td>${esc(quote.productionDeadline || state.settings.defaultProductionDeadline || "-")}</td>
       <td class="numeric">${money(totals.net)}</td>
@@ -1064,6 +1112,35 @@ function renderDashboardQuoteRow(quote) {
       </td>
     </tr>
   `;
+}
+
+function getFilteredQuotes() {
+  const term = String(ui.quoteSearch || "").trim().toLowerCase();
+  return state.quotes
+    .filter((quote) => ui.quoteStatusFilter === "all" || quote.status === ui.quoteStatusFilter)
+    .filter((quote) => {
+      if (!term) return true;
+      const customer = getCustomer(quote.customerId);
+      return [
+        quote.number,
+        quote.status,
+        quote.projectAddress,
+        quote.productionDeadline,
+        customer?.name,
+        customer?.address
+      ].some((value) => String(value || "").toLowerCase().includes(term));
+    })
+    .sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
+}
+
+function quoteStatusOptions() {
+  return [
+    { value: "all", label: "Összes állapot" },
+    { value: "Vázlat", label: "Vázlat" },
+    { value: "Elküldve", label: "Elküldve" },
+    { value: "Elfogadva", label: "Elfogadva" },
+    { value: "Elutasítva", label: "Elutasítva" }
+  ];
 }
 
 function quoteDashboardMetrics() {
@@ -2266,10 +2343,16 @@ function handleInput(event) {
     const quote = getSelectedQuote();
     if (!quote) return;
     quote[target.dataset.bindQuote] = coerceField(target.dataset.bindQuote, target.value);
+    touchQuote(quote);
     persistQuote(quote).catch((error) => {
       console.warn("Nem sikerült menteni az ajánlatot.", error);
       saveState();
     });
+    render();
+    return;
+  }
+  if (target.dataset.dashboardSearch !== undefined) {
+    ui.quoteSearch = target.value;
     render();
     return;
   }
@@ -2322,6 +2405,11 @@ function handleInput(event) {
 
 function handleChange(event) {
   const target = event.target;
+  if (target.dataset.dashboardStatus !== undefined) {
+    ui.quoteStatusFilter = target.value;
+    render();
+    return;
+  }
   if (target.dataset.bindItem) {
     updateItemDraft(target.dataset.bindItem, target.value);
     saveState();
@@ -2415,13 +2503,17 @@ function openDashboard() {
 
 async function newQuote() {
   const id = uid("quote");
+  const today = todayIso();
   const quote = {
     id,
     number: nextQuoteNumber(),
     customerId: state.customers[0]?.id || "",
     projectAddress: state.customers[0]?.address || "",
     status: "Vázlat",
-    createdAt: new Date().toISOString().slice(0, 10),
+    createdAt: today,
+    updatedAt: today,
+    version: 1,
+    statusHistory: [{ status: "Vázlat", at: today, note: "Létrehozva" }],
     productionDeadline: state.settings.defaultProductionDeadline || "6-8 hét",
     margin: Number(state.settings.defaultMargin || 0),
     vat: Number(state.settings.vat || 0),
@@ -2449,8 +2541,11 @@ async function duplicateQuote() {
   const copy = clone(quote);
   copy.id = uid("quote");
   copy.number = nextQuoteNumber();
-  copy.createdAt = new Date().toISOString().slice(0, 10);
+  copy.createdAt = todayIso();
+  copy.updatedAt = copy.createdAt;
+  copy.version = 1;
   copy.status = "Vázlat";
+  copy.statusHistory = [{ status: "Vázlat", at: copy.createdAt, note: "Másolatként létrehozva" }];
   copy.items = copy.items.map((item) => ({ ...item, id: uid("item") }));
   state.quotes.unshift(copy);
   ui.selectedQuoteId = copy.id;
@@ -2463,10 +2558,19 @@ async function duplicateQuote() {
 async function setQuoteStatus(id, status) {
   const quote = state.quotes.find((item) => item.id === id);
   if (!quote || !status) return;
+  if (quote.status === status) return;
   quote.status = status;
+  quote.statusHistory = quote.statusHistory || [];
+  quote.statusHistory.push({ status, at: todayIso(), note: "Státuszváltás" });
+  touchQuote(quote);
   await persistQuote(quote);
   render();
   showToast(`Ajánlat státusza: ${status}.`);
+}
+
+function touchQuote(quote) {
+  quote.updatedAt = todayIso();
+  quote.version = Number(quote.version || 1) + 1;
 }
 
 async function deleteQuote(id) {

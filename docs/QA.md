@@ -164,6 +164,22 @@ Purpose:
 - provide a copyable issue result template for #15/#2
 - keep manual installer validation separate from GitHub Actions build validation
 
+## 2026-07-06 Dashboard workflow check
+
+Implemented:
+
+- quote dashboard search field
+- quote dashboard status filter
+- quote version and updated date display
+- quote status history summary
+- version/status history preservation through normalized SQLite state rebuild
+
+Validated:
+
+```bash
+npm run check
+```
+
 ## 2026-07-03 GitHub Actions attempt
 
 Run:

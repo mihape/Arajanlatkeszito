@@ -253,7 +253,7 @@ function loadNormalizedState(db) {
       interiorDoors
     },
     openingImages: loadOpeningImages(db),
-    quotes: loadQuotes(db)
+    quotes: loadQuotes(db, fallback.quotes || [])
   };
 }
 
@@ -328,7 +328,8 @@ function loadCustomers(db) {
   }));
 }
 
-function loadQuotes(db) {
+function loadQuotes(db, fallbackQuotes = []) {
+  const fallbackById = new Map(fallbackQuotes.map((quote) => [quote.id, quote]));
   const itemsByQuote = db.prepare("SELECT * FROM quote_items ORDER BY quote_id, position, id").all().reduce((map, row) => {
     const item = JSON.parse(row.payload_json);
     if (!map.has(row.quote_id)) map.set(row.quote_id, []);
@@ -336,20 +337,24 @@ function loadQuotes(db) {
     return map;
   }, new Map());
 
-  return db.prepare("SELECT * FROM quotes ORDER BY created_at DESC, id").all().map((row) => ({
-    id: row.id,
-    number: row.number || row.id,
-    customerId: row.customer_id || "",
-    projectAddress: row.project_address || "",
-    status: row.status || "Vazlat",
-    createdAt: row.created_on || "",
-    productionDeadline: row.production_deadline || "",
-    margin: toNumber(row.margin_percent),
-    vat: parseVat(row.vat),
-    note: row.note || "",
-    items: itemsByQuote.get(row.id) || [],
-    ...camelSyncFields(row)
-  }));
+  return db.prepare("SELECT * FROM quotes ORDER BY created_at DESC, id").all().map((row) => {
+    const fallback = fallbackById.get(row.id) || {};
+    return {
+      ...fallback,
+      id: row.id,
+      number: row.number || row.id,
+      customerId: row.customer_id || "",
+      projectAddress: row.project_address || "",
+      status: row.status || "Vazlat",
+      createdAt: row.created_on || "",
+      productionDeadline: row.production_deadline || "",
+      margin: toNumber(row.margin_percent),
+      vat: parseVat(row.vat),
+      note: row.note || "",
+      items: itemsByQuote.get(row.id) || [],
+      ...camelSyncFields(row)
+    };
+  });
 }
 
 function loadProfiles(db) {

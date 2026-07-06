@@ -77,3 +77,14 @@ test("demo mode starts with fictional demo data", () => {
   assert(html.includes("AJ-2026-0001"));
   assert(html.includes("Demo mód - fiktív adatok"));
 });
+
+test("quotes dashboard renders workflow filters and version metadata", () => {
+  const html = renderApp("?mode=demo");
+
+  assert(html.includes("data-dashboard-search"));
+  assert(html.includes("data-dashboard-status"));
+  assert(html.includes("Módosítva"));
+  assert(html.includes("Verzió"));
+  assert(html.includes("v1"));
+  assert(html.includes("Kezdő állapot"));
+});

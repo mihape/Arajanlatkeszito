@@ -71,6 +71,9 @@ test("SQLite adapter initializes schema and persists app state", () => {
       number: "AJ-1",
       customerId: "customer-1",
       status: "Vazlat",
+      updatedAt: "2026-07-06",
+      version: 2,
+      statusHistory: [{ status: "Vazlat", at: "2026-07-06", note: "Workflow smoke" }],
       margin: 20,
       vat: 27,
       items: [{
@@ -101,6 +104,8 @@ test("SQLite adapter initializes schema and persists app state", () => {
   assert.equal(loaded.catalog.interiorDoors.models[0].images["int-color-white"], "data:image/png;base64,aaa");
   assert.equal(loaded.openingImages["tilt-turn"], "data:image/png;base64,bbb");
   assert.equal(loaded.quotes[0].number, "AJ-1");
+  assert.equal(loaded.quotes[0].version, 2);
+  assert.equal(loaded.quotes[0].statusHistory[0].note, "Workflow smoke");
   assert.equal(loaded.quotes[0].items[0].quantity, 2);
   assert.equal(exported.quotes[0].items[0].id, "item-1");
   assert.equal(adapter.getStatus().counts.customers, 1);
