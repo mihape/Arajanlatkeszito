@@ -2157,6 +2157,7 @@ function renderPrintSheet(quote) {
         }).join("")}
         <div class="print-total" style="display: grid; gap: 6px; justify-content: end;">
           <div class="internal-only">Beszerzés összesen: ${money(totals.cost)}</div>
+          <div class="internal-only">Haszonkulcs: ${number(quote.margin ?? state.settings.defaultMargin)}%</div>
           <div class="internal-only">Fedezet összesen: ${money(totals.net - totals.cost)}</div>
           <div>Nettó összesen: ${money(totals.net)}</div>
           <div>ÁFA ${esc(vatLabel(quote))}: ${money(totals.vatAmount)}</div>
