@@ -2479,18 +2479,42 @@ async function deleteQuote(id) {
   showToast("Ajánlat törölve.");
 }
 
-function printQuote(id, mode = "customer") {
+async function printQuote(id, mode = "customer") {
   if (id) ui.selectedQuoteId = id;
   ui.printMode = mode === "internal" ? "internal" : "customer";
   render();
   document.body.classList.toggle("print-internal", ui.printMode === "internal");
   document.body.classList.toggle("print-customer", ui.printMode !== "internal");
+  await waitForPrintRender();
+  const quote = getSelectedQuote();
+  const pdfApi = window.nyilaszaroApp?.pdf;
+  if (quote && pdfApi?.exportQuote) {
+    try {
+      const result = await pdfApi.exportQuote({ quoteNumber: quote.number, mode: ui.printMode });
+      clearPrintMode();
+      if (result?.ok) showToast(`PDF mentve: ${result.path}`);
+      else if (result?.canceled) showToast("PDF mentés megszakítva.");
+      else showToast("Nem sikerült PDF-et készíteni.");
+    } catch (error) {
+      console.warn("Nem sikerült PDF-et készíteni.", error);
+      clearPrintMode();
+      showToast("Nem sikerült PDF-et készíteni.");
+    }
+    return;
+  }
   window.setTimeout(() => window.print(), 0);
 }
 
 function clearPrintMode() {
   document.body.classList.remove("print-internal", "print-customer");
   ui.printMode = "customer";
+}
+
+function waitForPrintRender() {
+  return new Promise((resolve) => {
+    const raf = window.requestAnimationFrame || ((callback) => window.setTimeout(callback, 0));
+    raf(() => raf(resolve));
+  });
 }
 
 async function saveItem() {

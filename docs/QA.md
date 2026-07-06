@@ -126,7 +126,29 @@ Screenshot:
 - interactive click flow could not be automated because Chrome DevTools Protocol was not reachable reliably from this WSL setup
 - Electron window startup needs Windows validation
 - NSIS installer needs GitHub Actions Windows validation
-- PDF layout should still be visually checked after Electron `printToPDF` is implemented
+- PDF layout should still be visually checked on Windows after Electron `printToPDF` file export
+
+## 2026-07-06 PDF export check
+
+Implemented:
+
+- Electron PDF export channel: `pdf:export-quote`
+- Renderer customer/internal PDF buttons call preload PDF export when available.
+- Browser preview keeps `window.print()` fallback.
+- PDF default file names are sanitized for Windows file systems.
+
+Validated:
+
+```bash
+npm run check
+```
+
+Remaining manual QA:
+
+- Save customer PDF from the installed Windows app.
+- Save internal PDF from the installed Windows app.
+- Verify customer PDF hides purchase price and internal PDF shows purchase price/margin.
+- Verify multipage quote layout with uploaded opening images.
 
 ## 2026-07-03 GitHub Actions attempt
 

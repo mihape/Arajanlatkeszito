@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require("electron");
+const { PDF_CHANNELS } = require("../shared/storage-contract");
 
 contextBridge.exposeInMainWorld("nyilaszaroApp", {
   getVersion: () => ipcRenderer.invoke("app:get-version"),
@@ -13,5 +14,8 @@ contextBridge.exposeInMainWorld("nyilaszaroApp", {
     deleteCustomer: (id) => ipcRenderer.invoke("data:delete-customer", id),
     upsertQuote: (quote) => ipcRenderer.invoke("data:upsert-quote", quote),
     deleteQuote: (id) => ipcRenderer.invoke("data:delete-quote", id)
+  },
+  pdf: {
+    exportQuote: (options) => ipcRenderer.invoke(PDF_CHANNELS.EXPORT_QUOTE, options)
   }
 });

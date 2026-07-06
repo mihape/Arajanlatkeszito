@@ -50,10 +50,15 @@ const DATA_CHANNELS = Object.freeze({
   DELETE_QUOTE: "data:delete-quote"
 });
 
+const PDF_CHANNELS = Object.freeze({
+  EXPORT_QUOTE: "pdf:export-quote"
+});
+
 module.exports = {
   STORAGE_VERSION,
   TABLES,
   SYNC_FIELDS,
   SYNC_STATUS,
-  DATA_CHANNELS
+  DATA_CHANNELS,
+  PDF_CHANNELS
 };

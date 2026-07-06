@@ -133,7 +133,7 @@ Javasolt szinkron esemenyek:
 
 ## PDF export irany
 
-Rovid tavon Electron `printToPDF` hasznalhato, mert kozel all a mostani nyomtatasi nezettel. Kesobb erdemes kulon PDF sablon reteg:
+Rovid tavon Electron `printToPDF` hasznalhato, mert kozel all a mostani nyomtatasi nezettel. Az elso Electron export a renderer A4 print sheetjet menti fajlba preload IPC-n keresztul; bongeszos prototipusban marad a `window.print()` fallback. Kesobb erdemes kulon PDF sablon reteg:
 
 - ugyfel ajanlat
 - belso ajanlat beszerzesi adatokkal

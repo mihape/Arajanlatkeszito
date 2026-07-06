@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const { DATA_CHANNELS } = require("../shared/storage-contract");
 const { createSqliteAdapter } = require("./database");
+const { registerPdfHandlers } = require("./pdf-export");
 
 let dataAdapter;
 
@@ -40,6 +41,7 @@ app.whenReady().then(() => {
   ipcMain.handle(DATA_CHANNELS.DELETE_CUSTOMER, (_event, id) => dataAdapter.deleteCustomer(id));
   ipcMain.handle(DATA_CHANNELS.UPSERT_QUOTE, (_event, quote) => dataAdapter.upsertQuote(quote));
   ipcMain.handle(DATA_CHANNELS.DELETE_QUOTE, (_event, id) => dataAdapter.deleteQuote(id));
+  registerPdfHandlers();
   createMainWindow();
 
   app.on("activate", () => {

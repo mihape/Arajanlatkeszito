@@ -68,11 +68,12 @@ Cel: a legfontosabb arszamitasok tesztelhetok es nem csusznak el.
 - Belteri ajto egyedi tok felar teszt. Elso kor kesz.
 - Stabil Electron PDF export.
 - Ugyfel PDF es belso PDF szetvalasztasa.
+- Elso Electron `printToPDF` fajlexport preload IPC-n keresztul: ugyfel es belso mod.
 
 Elfogadasi feltetel:
 
 - Automata tesztek futnak a kalkulacio kritikus reszeire.
-- PDF export nem a kezi bongeszo nyomtatasra epul.
+- PDF export Electron runtime-ban nem a kezi bongeszo nyomtatasra epul.
 
 ## 4. fazis - Torzsadat es arlista import
 
