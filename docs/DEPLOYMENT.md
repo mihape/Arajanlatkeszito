@@ -13,6 +13,13 @@ npm run dev
 
 Development mode uses fictional demo records so screenshots and manual testing are easier.
 
+Explicit mode launches:
+
+```bash
+npm run dev:demo
+npm run dev:release
+```
+
 ## Checks
 
 ```bash
@@ -97,3 +104,7 @@ Target release assets:
 - `CHECKSUMS.txt`
 
 The demo installer is a later milestone. The current workflow prepares the normal Windows build path first.
+
+## Manual Windows Validation
+
+Use [Windows validation checklist](WINDOWS_VALIDATION.md) after a successful GitHub Actions `Build Windows` run. The checklist covers installer download, release/demo startup, SQLite file creation, PDF export and backup restore.

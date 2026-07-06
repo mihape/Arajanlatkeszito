@@ -150,6 +150,20 @@ Remaining manual QA:
 - Verify customer PDF hides purchase price and internal PDF shows purchase price/margin.
 - Verify multipage quote layout with uploaded opening images.
 
+## 2026-07-06 Windows manual validation support
+
+Added:
+
+- `npm run dev:demo`
+- `npm run dev:release`
+- `docs/WINDOWS_VALIDATION.md`
+
+Purpose:
+
+- make release/demo launch checks reproducible on Windows
+- provide a copyable issue result template for #15/#2
+- keep manual installer validation separate from GitHub Actions build validation
+
 ## 2026-07-03 GitHub Actions attempt
 
 Run:

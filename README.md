@@ -36,6 +36,13 @@ npm run dev
 
 Development mode starts with fictional demo data. A packaged app defaults to release mode and should start without demo customer/quote records unless demo mode is explicitly enabled.
 
+Explicit launch modes:
+
+```bash
+npm run dev:demo
+npm run dev:release
+```
+
 Run checks:
 
 ```bash
@@ -74,6 +81,7 @@ Ez egy helyi Windows ajanlatkeszito app nyilaszarokhoz. A jelenlegi verzio mar E
 - [Architecture](docs/ARCHITECTURE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Deployment](docs/DEPLOYMENT.md)
+- [Windows validation checklist](docs/WINDOWS_VALIDATION.md)
 - [Security](docs/SECURITY.md)
 - [QA notes](docs/QA.md)
 - [CRM integration](docs/CRM_INTEGRATION.md)
