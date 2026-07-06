@@ -1,6 +1,6 @@
 # SQLite migration plan
 
-Status: first runtime bridge implemented. Electron can now create a local `app-state.sqlite` database in the user app data folder, apply the v1 schema, and persist the full app-state JSON through preload IPC. The renderer still keeps `localStorage` as browser-preview fallback while SQLite is phased in.
+Status: first normalized runtime bridge implemented. Electron can now create a local `app-state.sqlite` database in the user app data folder, apply the v1 schema, persist the full app-state JSON through preload IPC, and mirror the main records into normalized SQLite tables. The renderer still keeps `localStorage` as browser-preview fallback while SQLite is phased in.
 
 ## Target
 
@@ -77,10 +77,19 @@ The first IPC boundary supports:
 - `window.nyilaszaroApp.data.importState(state)`
 - `window.nyilaszaroApp.data.exportState()`
 
-The current implementation stores one normalized full-state JSON document in the SQLite `settings` table under `app_state`. This is a deliberate bridge step: it proves durable app-data storage in SQLite without rewriting every renderer mutation at once.
+The current implementation stores one normalized full-state JSON document in the SQLite `settings` table under `app_state`, then mirrors the main state into normalized tables on every save/import.
+
+Currently mirrored:
+
+- customers
+- quotes and quote items
+- plastic profiles and exterior opening types
+- price matrices and matrix cells, including non-manufacturable cells
+- colors, glasses, extensions, accessories
+- interior manufacturers, models, colors, frames, handles, locks
+- uploaded exterior/interior images as `item_images`
 
 Next implementation step:
 
-- persist/import individual normalized tables from the existing JSON shape
 - move quote/customer/catalog CRUD behind preload methods
 - keep JSON backup as an export format generated from SQLite

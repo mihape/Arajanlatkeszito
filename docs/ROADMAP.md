@@ -54,6 +54,7 @@ Aktualis elokeszites:
 - `src/main/database.js`
 - `docs/SQLITE_MIGRATION.md`
 - Electronban elso SQLite full-state mentes/betoltes preload API-n keresztul.
+- Fobb adatok normalizalt tabla-tukrozese menteskor: ugyfelek, ajanlatok, tetelek, katalogusok, matrixok, belteri torzsadatok, kepek.
 
 ## 3. fazis - Kalkulacio es PDF stabilizalas
 

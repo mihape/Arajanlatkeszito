@@ -74,7 +74,7 @@ A SQLite elokeszites elso kodszintu elemei:
 
 - `src/shared/sqlite-schema.js`: elso sema/migracio v1.
 - `src/shared/storage-contract.js`: tabla- es szinkronmezok, elso IPC csatorna.
-- `src/main/database.js`: `node:sqlite` alapu elso runtime adapter, full-state JSON mentessel SQLite-ba.
+- `src/main/database.js`: `node:sqlite` alapu runtime adapter, full-state JSON mentessel es normalizalt tabla-tukrozessel SQLite-ba.
 - `window.nyilaszaroApp.data.*`: preload hatar statusz, betoltes, mentes, import es export muveletekhez.
 
 A kalkulacios logika elso tesztelheto modulja:
