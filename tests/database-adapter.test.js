@@ -88,8 +88,21 @@ test("SQLite adapter initializes schema and persists app state", () => {
   adapter.saveState(state);
 
   assert.equal(adapter.getStatus().hasState, true);
-  assert.deepEqual(adapter.loadState().state, state);
-  assert.deepEqual(adapter.exportState().state, state);
+  const loaded = adapter.loadState().state;
+  const exported = adapter.exportState().state;
+  assert.equal(adapter.loadState().normalized, true);
+  assert.equal(loaded.settings.companyName, state.settings.companyName);
+  assert.equal(loaded.customers[0].name, state.customers[0].name);
+  assert.equal(loaded.catalog.profiles[0].manufacturer, "Demo");
+  assert.equal(loaded.catalog.exteriorOpenings[0].productTypeId, "window");
+  assert.deepEqual(loaded.catalog.matrices["profile-1__tilt-turn"].widths, [1000, 1100]);
+  assert.equal(loaded.catalog.matrices["profile-1__tilt-turn"].prices["1100x1200"], 56000);
+  assert.equal(loaded.catalog.matrices["profile-1__tilt-turn"].blocked["1100x1200"], true);
+  assert.equal(loaded.catalog.interiorDoors.models[0].images["int-color-white"], "data:image/png;base64,aaa");
+  assert.equal(loaded.openingImages["tilt-turn"], "data:image/png;base64,bbb");
+  assert.equal(loaded.quotes[0].number, "AJ-1");
+  assert.equal(loaded.quotes[0].items[0].quantity, 2);
+  assert.equal(exported.quotes[0].items[0].id, "item-1");
   assert.equal(adapter.getStatus().counts.customers, 1);
   assert.equal(adapter.getStatus().counts.quotes, 1);
   assert.equal(adapter.getStatus().counts.quote_items, 1);

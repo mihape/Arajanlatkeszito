@@ -96,9 +96,10 @@ function createSqliteAdapter(options = {}) {
 
     loadState() {
       return {
-        state: loadAppState(db),
+        state: loadNormalizedState(db) || loadAppState(db),
         path: dbPath,
-        schemaVersion: SCHEMA_VERSION
+        schemaVersion: SCHEMA_VERSION,
+        normalized: Boolean(loadNormalizedState(db))
       };
     },
 
@@ -124,9 +125,10 @@ function createSqliteAdapter(options = {}) {
 
     exportState() {
       return {
-        state: loadAppState(db),
+        state: loadNormalizedState(db) || loadAppState(db),
         path: dbPath,
-        exportedAt: new Date().toISOString()
+        exportedAt: new Date().toISOString(),
+        normalized: Boolean(loadNormalizedState(db))
       };
     },
 
@@ -216,6 +218,45 @@ function loadAppState(db) {
   return JSON.parse(row.value_json);
 }
 
+function loadNormalizedState(db) {
+  const counts = getTableCounts(db);
+  const hasNormalizedRows = [
+    "customers",
+    "quotes",
+    "profiles",
+    "exterior_opening_types",
+    "price_matrices",
+    "colors",
+    "glasses",
+    "extensions",
+    "accessories",
+    "interior_manufacturers",
+    "interior_models"
+  ].some((table) => counts[table] > 0);
+  if (!hasNormalizedRows) return null;
+
+  const fallback = loadAppState(db) || {};
+  const interiorDoors = loadInteriorDoors(db);
+  return {
+    ...fallback,
+    settings: fallback.settings || {},
+    customers: loadCustomers(db),
+    catalog: {
+      ...(fallback.catalog || {}),
+      profiles: loadProfiles(db),
+      exteriorOpenings: loadExteriorOpenings(db),
+      matrices: loadPriceMatrices(db),
+      colors: loadColors(db),
+      glasses: loadGlasses(db),
+      extensions: loadExtensions(db),
+      accessories: loadAccessories(db),
+      interiorDoors
+    },
+    openingImages: loadOpeningImages(db),
+    quotes: loadQuotes(db)
+  };
+}
+
 function saveAppState(db, state) {
   if (!state || typeof state !== "object") {
     throw new Error("Cannot save empty application state.");
@@ -273,6 +314,192 @@ function persistState(db, state) {
     db.exec("ROLLBACK");
     throw error;
   }
+}
+
+function loadCustomers(db) {
+  return db.prepare("SELECT * FROM customers ORDER BY created_at, id").all().map((row) => ({
+    id: row.id,
+    name: row.name || "",
+    phone: row.phone || "",
+    email: row.email || "",
+    address: row.address || "",
+    note: row.note || "",
+    ...camelSyncFields(row)
+  }));
+}
+
+function loadQuotes(db) {
+  const itemsByQuote = db.prepare("SELECT * FROM quote_items ORDER BY quote_id, position, id").all().reduce((map, row) => {
+    const item = JSON.parse(row.payload_json);
+    if (!map.has(row.quote_id)) map.set(row.quote_id, []);
+    map.get(row.quote_id).push({ ...item, id: item.id || row.id });
+    return map;
+  }, new Map());
+
+  return db.prepare("SELECT * FROM quotes ORDER BY created_at DESC, id").all().map((row) => ({
+    id: row.id,
+    number: row.number || row.id,
+    customerId: row.customer_id || "",
+    projectAddress: row.project_address || "",
+    status: row.status || "Vazlat",
+    createdAt: row.created_on || "",
+    productionDeadline: row.production_deadline || "",
+    margin: toNumber(row.margin_percent),
+    vat: parseVat(row.vat),
+    note: row.note || "",
+    items: itemsByQuote.get(row.id) || [],
+    ...camelSyncFields(row)
+  }));
+}
+
+function loadProfiles(db) {
+  return db.prepare("SELECT * FROM profiles ORDER BY created_at, id").all().map((row) => ({
+    id: row.id,
+    manufacturer: row.manufacturer || "",
+    name: row.name || "",
+    category: row.category || "",
+    uf: row.uf,
+    ug2: row.ug2,
+    ug3: row.ug3,
+    note: row.note || "",
+    ...camelSyncFields(row)
+  }));
+}
+
+function loadExteriorOpenings(db) {
+  return db.prepare("SELECT * FROM exterior_opening_types ORDER BY created_at, id").all().map((row) => ({
+    id: row.id,
+    name: row.name || "",
+    productTypeId: row.product_type_id || "window",
+    note: row.note || "",
+    ...camelSyncFields(row)
+  }));
+}
+
+function loadPriceMatrices(db) {
+  const cellsByMatrix = db.prepare("SELECT * FROM price_matrix_cells ORDER BY matrix_id, width_mm, height_mm").all().reduce((map, row) => {
+    if (!map.has(row.matrix_id)) map.set(row.matrix_id, []);
+    map.get(row.matrix_id).push(row);
+    return map;
+  }, new Map());
+
+  return db.prepare("SELECT * FROM price_matrices ORDER BY created_at, id").all().reduce((matrices, row) => {
+    const widths = new Set();
+    const heights = new Set();
+    const prices = {};
+    const blocked = {};
+    (cellsByMatrix.get(row.id) || []).forEach((cell) => {
+      widths.add(Number(cell.width_mm));
+      heights.add(Number(cell.height_mm));
+      const key = `${Number(cell.width_mm)}x${Number(cell.height_mm)}`;
+      prices[key] = toNumber(cell.purchase_price_net);
+      if (cell.is_blocked) blocked[key] = true;
+    });
+
+    matrices[row.id] = {
+      widths: Array.from(widths).sort((left, right) => left - right),
+      heights: Array.from(heights).sort((left, right) => left - right),
+      prices,
+      blocked
+    };
+    return matrices;
+  }, {});
+}
+
+function loadColors(db) {
+  return db.prepare("SELECT * FROM colors ORDER BY created_at, id").all().map((row) => ({
+    id: row.id,
+    name: row.name || "",
+    type: row.price_type || "percent",
+    outsideValue: toNumber(row.outside_value),
+    bothValue: toNumber(row.both_value),
+    ...camelSyncFields(row)
+  }));
+}
+
+function loadGlasses(db) {
+  return db.prepare("SELECT * FROM glasses ORDER BY created_at, id").all().map((row) => ({
+    id: row.id,
+    name: row.name || "",
+    layers: toNumber(row.layers),
+    ug: toNumber(row.ug),
+    type: row.price_type || "percent",
+    value: toNumber(row.value),
+    ...camelSyncFields(row)
+  }));
+}
+
+function loadExtensions(db) {
+  return db.prepare("SELECT * FROM extensions ORDER BY created_at, id").all().map((row) => ({
+    id: row.id,
+    mm: toNumber(row.mm),
+    pricePerM: toNumber(row.price_per_m),
+    ...camelSyncFields(row)
+  }));
+}
+
+function loadAccessories(db) {
+  return db.prepare("SELECT * FROM accessories ORDER BY created_at, id").all().map((row) => ({
+    id: row.id,
+    category: row.category || "accessory",
+    name: row.name || "",
+    pricing: row.pricing || "fixed",
+    price: toNumber(row.price),
+    ...camelSyncFields(row)
+  }));
+}
+
+function loadInteriorDoors(db) {
+  const imagesByModel = db.prepare("SELECT * FROM item_images WHERE owner_type = 'interior_model'").all().reduce((map, row) => {
+    if (!map.has(row.owner_id)) map.set(row.owner_id, {});
+    map.get(row.owner_id)[row.color_id] = row.data_url || "";
+    return map;
+  }, new Map());
+
+  return {
+    manufacturers: db.prepare("SELECT * FROM interior_manufacturers ORDER BY created_at, id").all().map((row) => ({
+      id: row.id,
+      name: row.name || "",
+      sizing: row.sizing || "custom",
+      sizesText: row.sizes_text || "",
+      note: row.note || "",
+      ...camelSyncFields(row)
+    })),
+    models: db.prepare("SELECT * FROM interior_models ORDER BY created_at, id").all().map((row) => ({
+      id: row.id,
+      manufacturerId: row.manufacturer_id,
+      name: row.name || "",
+      decorPrice: toNumber(row.decor_price),
+      cplPrice: toNumber(row.cpl_price),
+      customFrameEnabled: Boolean(row.custom_frame_enabled),
+      decorIncludedFrameCm: toNumber(row.decor_included_frame_cm),
+      cplIncludedFrameCm: toNumber(row.cpl_included_frame_cm),
+      customFrameSurchargePerCm: toNumber(row.custom_frame_surcharge_per_cm),
+      note: row.note || "",
+      images: imagesByModel.get(row.id) || {},
+      ...camelSyncFields(row)
+    })),
+    colors: loadNamedRows(db, "interior_colors", false),
+    frames: loadNamedRows(db, "interior_frames", true),
+    handles: loadNamedRows(db, "interior_handles", true),
+    locks: loadNamedRows(db, "interior_locks", true)
+  };
+}
+
+function loadNamedRows(db, table, hasPrice) {
+  return db.prepare(`SELECT * FROM ${table} ORDER BY created_at, id`).all().map((row) => ({
+    id: row.id,
+    name: row.name || "",
+    ...(hasPrice ? { price: toNumber(row.price) } : {}),
+    ...camelSyncFields(row)
+  }));
+}
+
+function loadOpeningImages(db) {
+  return db.prepare("SELECT * FROM item_images WHERE owner_type = 'exterior_opening'").all().reduce((images, row) => {
+    images[row.owner_id] = row.data_url || "";
+    return images;
+  }, {});
 }
 
 function replaceNormalizedTables(db, state) {
@@ -449,7 +676,7 @@ function insertPriceMatrices(db, matrices, state, now) {
           matrixId,
           toNumber(width),
           toNumber(height),
-          blocked ? 0 : toNumber(matrix.prices?.[cellKey]),
+          toNumber(matrix.prices?.[cellKey]),
           blocked ? 1 : 0,
           blocked ? "Nem gyarthato meret" : null,
           null,
@@ -623,6 +850,14 @@ function syncValues(item, now) {
   ];
 }
 
+function camelSyncFields(row) {
+  const fields = {};
+  if (row.external_id) fields.externalId = row.external_id;
+  if (row.sync_status && row.sync_status !== "local") fields.syncStatus = row.sync_status;
+  if (row.synced_at) fields.syncedAt = row.synced_at;
+  return fields;
+}
+
 function getTableCounts(db) {
   return TABLES.reduce((counts, table) => {
     counts[table] = db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count;
@@ -639,11 +874,16 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+function parseVat(value) {
+  return String(value).toUpperCase() === "FAD" ? "FAD" : toNumber(value);
+}
+
 module.exports = {
   createPendingSqliteAdapter,
   createSqliteAdapter,
   initializeDatabase,
   loadAppState,
+  loadNormalizedState,
   saveAppState,
   persistState
 };

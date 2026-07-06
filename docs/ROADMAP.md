@@ -56,6 +56,7 @@ Aktualis elokeszites:
 - Electronban elso SQLite full-state mentes/betoltes preload API-n keresztul.
 - Fobb adatok normalizalt tabla-tukrozese menteskor: ugyfelek, ajanlatok, tetelek, katalogusok, matrixok, belteri torzsadatok, kepek.
 - Elso ugyfel es ajanlat CRUD preload API szelet.
+- App state visszaepitese normalizalt SQLite tablakbol `loadState`/`exportState` utvonalon.
 
 ## 3. fazis - Kalkulacio es PDF stabilizalas
 

@@ -83,6 +83,8 @@ The first IPC boundary supports:
 
 The current implementation stores one normalized full-state JSON document in the SQLite `settings` table under `app_state`, then mirrors the main state into normalized tables on every save/import.
 
+`loadState()` and `exportState()` now prefer rebuilding the renderer state from normalized SQLite tables. The full-state JSON remains as a compatibility fallback and keeps settings or future fields that have not yet been split into dedicated tables.
+
 Currently mirrored:
 
 - customers
@@ -96,5 +98,5 @@ Currently mirrored:
 Next implementation step:
 
 - move catalog CRUD behind preload methods
-- split customer and quote persistence into narrower table-level writes after the state round-trip is stable
+- split customer and quote persistence into narrower table-level writes after the normalized state round-trip is stable
 - keep JSON backup as an export format generated from SQLite
