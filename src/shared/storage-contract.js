@@ -43,7 +43,11 @@ const DATA_CHANNELS = Object.freeze({
   LOAD_STATE: "data:load-state",
   SAVE_STATE: "data:save-state",
   IMPORT_STATE: "data:import-state",
-  EXPORT_STATE: "data:export-state"
+  EXPORT_STATE: "data:export-state",
+  UPSERT_CUSTOMER: "data:upsert-customer",
+  DELETE_CUSTOMER: "data:delete-customer",
+  UPSERT_QUOTE: "data:upsert-quote",
+  DELETE_QUOTE: "data:delete-quote"
 });
 
 module.exports = {

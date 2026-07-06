@@ -36,6 +36,10 @@ app.whenReady().then(() => {
   ipcMain.handle(DATA_CHANNELS.SAVE_STATE, (_event, state) => dataAdapter.saveState(state));
   ipcMain.handle(DATA_CHANNELS.IMPORT_STATE, (_event, state) => dataAdapter.importState(state));
   ipcMain.handle(DATA_CHANNELS.EXPORT_STATE, () => dataAdapter.exportState());
+  ipcMain.handle(DATA_CHANNELS.UPSERT_CUSTOMER, (_event, customer) => dataAdapter.upsertCustomer(customer));
+  ipcMain.handle(DATA_CHANNELS.DELETE_CUSTOMER, (_event, id) => dataAdapter.deleteCustomer(id));
+  ipcMain.handle(DATA_CHANNELS.UPSERT_QUOTE, (_event, quote) => dataAdapter.upsertQuote(quote));
+  ipcMain.handle(DATA_CHANNELS.DELETE_QUOTE, (_event, id) => dataAdapter.deleteQuote(id));
   createMainWindow();
 
   app.on("activate", () => {

@@ -45,6 +45,22 @@ function createPendingSqliteAdapter() {
         schemaVersion: SCHEMA_VERSION,
         ready: false
       };
+    },
+
+    upsertCustomer() {
+      return { ok: false, ready: false, state: null };
+    },
+
+    deleteCustomer() {
+      return { ok: false, ready: false, state: null };
+    },
+
+    upsertQuote() {
+      return { ok: false, ready: false, state: null };
+    },
+
+    deleteQuote() {
+      return { ok: false, ready: false, state: null };
     }
   };
 }
@@ -112,6 +128,43 @@ function createSqliteAdapter(options = {}) {
         path: dbPath,
         exportedAt: new Date().toISOString()
       };
+    },
+
+    upsertCustomer(customer) {
+      const state = requireState(db);
+      upsertById(state, "customers", customer);
+      persistState(db, state);
+      return mutationResult(state, dbPath);
+    },
+
+    deleteCustomer(id) {
+      const state = requireState(db);
+      const used = (state.quotes || []).some((quote) => quote.customerId === id);
+      if (used) {
+        return {
+          ok: false,
+          reason: "customer-in-use",
+          message: "Cannot delete a customer while quotes reference it.",
+          state
+        };
+      }
+      state.customers = (state.customers || []).filter((customer) => customer.id !== id);
+      persistState(db, state);
+      return mutationResult(state, dbPath);
+    },
+
+    upsertQuote(quote) {
+      const state = requireState(db);
+      upsertById(state, "quotes", quote, { prepend: true });
+      persistState(db, state);
+      return mutationResult(state, dbPath);
+    },
+
+    deleteQuote(id) {
+      const state = requireState(db);
+      state.quotes = (state.quotes || []).filter((quote) => quote.id !== id);
+      persistState(db, state);
+      return mutationResult(state, dbPath);
     }
   };
 }
@@ -175,6 +228,39 @@ function saveAppState(db, state) {
       value_json = excluded.value_json,
       updated_at = excluded.updated_at
   `).run(APP_STATE_KEY, JSON.stringify(state), now);
+}
+
+function requireState(db) {
+  const state = loadAppState(db);
+  if (!state) {
+    throw new Error("Application state is not initialized.");
+  }
+  if (!Array.isArray(state.customers)) state.customers = [];
+  if (!Array.isArray(state.quotes)) state.quotes = [];
+  return state;
+}
+
+function upsertById(state, collection, item, options = {}) {
+  if (!item?.id) throw new Error(`Cannot upsert ${collection} item without id.`);
+  if (!Array.isArray(state[collection])) state[collection] = [];
+  const index = state[collection].findIndex((row) => row.id === item.id);
+  if (index >= 0) {
+    state[collection][index] = item;
+  } else if (options.prepend) {
+    state[collection].unshift(item);
+  } else {
+    state[collection].push(item);
+  }
+}
+
+function mutationResult(state, path) {
+  return {
+    ok: true,
+    normalized: true,
+    state,
+    path,
+    savedAt: new Date().toISOString()
+  };
 }
 
 function persistState(db, state) {

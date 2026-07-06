@@ -76,6 +76,10 @@ The first IPC boundary supports:
 - `window.nyilaszaroApp.data.saveState(state)`
 - `window.nyilaszaroApp.data.importState(state)`
 - `window.nyilaszaroApp.data.exportState()`
+- `window.nyilaszaroApp.data.upsertCustomer(customer)`
+- `window.nyilaszaroApp.data.deleteCustomer(id)`
+- `window.nyilaszaroApp.data.upsertQuote(quote)`
+- `window.nyilaszaroApp.data.deleteQuote(id)`
 
 The current implementation stores one normalized full-state JSON document in the SQLite `settings` table under `app_state`, then mirrors the main state into normalized tables on every save/import.
 
@@ -91,5 +95,6 @@ Currently mirrored:
 
 Next implementation step:
 
-- move quote/customer/catalog CRUD behind preload methods
+- move catalog CRUD behind preload methods
+- split customer and quote persistence into narrower table-level writes after the state round-trip is stable
 - keep JSON backup as an export format generated from SQLite

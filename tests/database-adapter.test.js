@@ -100,3 +100,62 @@ test("SQLite adapter initializes schema and persists app state", () => {
   assert.equal(adapter.getStatus().counts.item_images, 2);
   assert(fs.existsSync(path.join(dataDir, "test.sqlite")));
 });
+
+test("SQLite adapter exposes customer and quote CRUD mutations", () => {
+  const tmpRoot = path.join(root, ".tmp-tests");
+  fs.mkdirSync(tmpRoot, { recursive: true });
+  const dataDir = fs.mkdtempSync(path.join(tmpRoot, "nyilaszaro-crud-db-"));
+  const adapter = createSqliteAdapter({ dataDir, fileName: "crud.sqlite" });
+
+  adapter.saveState({
+    settings: {},
+    customers: [],
+    catalog: {
+      profiles: [],
+      exteriorOpenings: [],
+      matrices: {},
+      colors: [],
+      glasses: [],
+      extensions: [],
+      accessories: [],
+      interiorDoors: { manufacturers: [], models: [], colors: [], frames: [], handles: [], locks: [] }
+    },
+    openingImages: {},
+    quotes: []
+  });
+
+  let result = adapter.upsertCustomer({ id: "customer-1", name: "Demo Partner Kft.", email: "demo@example.invalid" });
+  assert.equal(result.ok, true);
+  assert.equal(result.state.customers.length, 1);
+  assert.equal(adapter.getStatus().counts.customers, 1);
+
+  result = adapter.upsertQuote({
+    id: "quote-1",
+    number: "AJ-1",
+    customerId: "customer-1",
+    status: "Vazlat",
+    margin: 20,
+    vat: 27,
+    items: [{ id: "item-1", productTypeId: "window", width: 1000, height: 1200, quantity: 1 }]
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.state.quotes.length, 1);
+  assert.equal(adapter.getStatus().counts.quotes, 1);
+  assert.equal(adapter.getStatus().counts.quote_items, 1);
+
+  result = adapter.deleteCustomer("customer-1");
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "customer-in-use");
+  assert.equal(adapter.getStatus().counts.customers, 1);
+
+  result = adapter.deleteQuote("quote-1");
+  assert.equal(result.ok, true);
+  assert.equal(result.state.quotes.length, 0);
+  assert.equal(adapter.getStatus().counts.quotes, 0);
+  assert.equal(adapter.getStatus().counts.quote_items, 0);
+
+  result = adapter.deleteCustomer("customer-1");
+  assert.equal(result.ok, true);
+  assert.equal(result.state.customers.length, 0);
+  assert.equal(adapter.getStatus().counts.customers, 0);
+});

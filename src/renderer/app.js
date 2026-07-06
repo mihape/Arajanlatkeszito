@@ -273,6 +273,67 @@ async function saveStateToDesktopNow() {
   return dataApi.saveState(clone(state));
 }
 
+function syncStateFromMutation(result, options = {}) {
+  if (!result?.state) return false;
+  const previous = {
+    view: ui.view,
+    selectedQuoteId: ui.selectedQuoteId,
+    selectedItemId: ui.selectedItemId,
+    selectedCustomerId: ui.selectedCustomerId
+  };
+  state = normalizeState(result.state, createSeedState());
+  resetUiAfterStateHydration();
+  ui.view = options.view || previous.view;
+  ui.selectedQuoteId = options.selectedQuoteId ?? (state.quotes.some((quote) => quote.id === previous.selectedQuoteId) ? previous.selectedQuoteId : state.quotes[0]?.id || "");
+  ui.selectedItemId = options.selectedItemId ?? previous.selectedItemId;
+  ui.selectedCustomerId = options.selectedCustomerId ?? (state.customers.some((customer) => customer.id === previous.selectedCustomerId) ? previous.selectedCustomerId : state.customers[0]?.id || "");
+  return true;
+}
+
+async function persistCustomer(customer) {
+  const dataApi = window.nyilaszaroApp?.data;
+  if (!dataApi?.upsertCustomer) {
+    saveState();
+    return { ok: true };
+  }
+  const result = await dataApi.upsertCustomer(clone(customer));
+  syncStateFromMutation(result, { selectedCustomerId: customer.id, view: ui.view });
+  return result;
+}
+
+async function persistCustomerDelete(id) {
+  const dataApi = window.nyilaszaroApp?.data;
+  if (!dataApi?.deleteCustomer) {
+    saveState();
+    return { ok: true };
+  }
+  const result = await dataApi.deleteCustomer(id);
+  if (result.ok) syncStateFromMutation(result);
+  return result;
+}
+
+async function persistQuote(quote) {
+  const dataApi = window.nyilaszaroApp?.data;
+  if (!dataApi?.upsertQuote) {
+    saveState();
+    return { ok: true };
+  }
+  const result = await dataApi.upsertQuote(clone(quote));
+  syncStateFromMutation(result, { selectedQuoteId: quote.id, selectedItemId: ui.selectedItemId, view: ui.view });
+  return result;
+}
+
+async function persistQuoteDelete(id) {
+  const dataApi = window.nyilaszaroApp?.data;
+  if (!dataApi?.deleteQuote) {
+    saveState();
+    return { ok: true };
+  }
+  const result = await dataApi.deleteQuote(id);
+  if (result.ok) syncStateFromMutation(result);
+  return result;
+}
+
 function createSeedState() {
   const profiles = [
     {
@@ -2204,7 +2265,10 @@ function handleInput(event) {
     const quote = getSelectedQuote();
     if (!quote) return;
     quote[target.dataset.bindQuote] = coerceField(target.dataset.bindQuote, target.value);
-    saveState();
+    persistQuote(quote).catch((error) => {
+      console.warn("Nem sikerült menteni az ajánlatot.", error);
+      saveState();
+    });
     render();
     return;
   }
@@ -2348,7 +2412,7 @@ function openDashboard() {
   render();
 }
 
-function newQuote() {
+async function newQuote() {
   const id = uid("quote");
   const quote = {
     id,
@@ -2368,7 +2432,8 @@ function newQuote() {
   ui.view = "quote-editor";
   ui.selectedItemId = "";
   ui.itemDraft = createDefaultItem(state);
-  saveState();
+  await persistQuote(quote);
+  render();
   showToast("Új ajánlat létrehozva.");
 }
 
@@ -2377,7 +2442,7 @@ function nextQuoteNumber() {
   return `AJ-${new Date().getFullYear()}-${String(next).padStart(4, "0")}`;
 }
 
-function duplicateQuote() {
+async function duplicateQuote() {
   const quote = getSelectedQuote();
   if (!quote) return;
   const copy = clone(quote);
@@ -2389,25 +2454,28 @@ function duplicateQuote() {
   state.quotes.unshift(copy);
   ui.selectedQuoteId = copy.id;
   ui.view = "quote-editor";
-  saveState();
+  await persistQuote(copy);
+  render();
   showToast("Ajánlat másolva.");
 }
 
-function setQuoteStatus(id, status) {
+async function setQuoteStatus(id, status) {
   const quote = state.quotes.find((item) => item.id === id);
   if (!quote || !status) return;
   quote.status = status;
-  saveState();
+  await persistQuote(quote);
+  render();
   showToast(`Ajánlat státusza: ${status}.`);
 }
 
-function deleteQuote(id) {
+async function deleteQuote(id) {
   const index = state.quotes.findIndex((quote) => quote.id === id);
   if (index < 0) return;
   const [removed] = state.quotes.splice(index, 1);
   if (ui.selectedQuoteId === removed.id) ui.selectedQuoteId = state.quotes[0]?.id || "";
   ui.view = "quotes";
-  saveState();
+  await persistQuoteDelete(id);
+  render();
   showToast("Ajánlat törölve.");
 }
 
@@ -2425,7 +2493,7 @@ function clearPrintMode() {
   ui.printMode = "customer";
 }
 
-function saveItem() {
+async function saveItem() {
   const quote = getSelectedQuote();
   if (!quote) return;
   const item = normalizeItem(ui.itemDraft);
@@ -2442,7 +2510,8 @@ function saveItem() {
     ui.selectedItemId = item.id;
   }
   ui.itemDraft = normalizeItem(quote.items.find((row) => row.id === ui.selectedItemId));
-  saveState();
+  await persistQuote(quote);
+  render();
   showToast("Tétel mentve.");
 }
 
@@ -2500,13 +2569,14 @@ function selectItem(id) {
   render();
 }
 
-function deleteSelectedItem() {
+async function deleteSelectedItem() {
   const quote = getSelectedQuote();
   if (!quote || !ui.selectedItemId) return;
   quote.items = quote.items.filter((item) => item.id !== ui.selectedItemId);
   ui.selectedItemId = "";
   ui.itemDraft = createDefaultItem(state);
-  saveState();
+  await persistQuote(quote);
+  render();
   showToast("Tétel törölve.");
 }
 
@@ -2516,7 +2586,7 @@ function newCustomer() {
   render();
 }
 
-function saveCustomer() {
+async function saveCustomer() {
   const draft = { ...ui.customerDraft };
   if (!draft.name.trim()) {
     showToast("Az ügyfél neve kötelező.");
@@ -2530,7 +2600,8 @@ function saveCustomer() {
     state.customers.push(draft);
     ui.customerDraft = createCustomerDraft(draft);
   }
-  saveState();
+  await persistCustomer(draft);
+  render();
   showToast("Ügyfél mentve.");
 }
 
@@ -2541,7 +2612,7 @@ function editCustomer(id) {
   render();
 }
 
-function deleteCustomer(id) {
+async function deleteCustomer(id) {
   const used = state.quotes.some((quote) => quote.customerId === id);
   if (used) {
     showToast("Ez az ügyfél szerepel ajánlatban, ezért nem törölhető.");
@@ -2549,7 +2620,8 @@ function deleteCustomer(id) {
   }
   state.customers = state.customers.filter((customer) => customer.id !== id);
   ui.customerDraft = createCustomerDraft();
-  saveState();
+  await persistCustomerDelete(id);
+  render();
   showToast("Ügyfél törölve.");
 }
 
