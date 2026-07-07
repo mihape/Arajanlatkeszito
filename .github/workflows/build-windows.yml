@@ -37,6 +37,9 @@ jobs:
       - name: Smoke test packaged release app
         run: npm run smoke:packaged:release
 
+      - name: Smoke test silent installer release app
+        run: npm run smoke:installer:release
+
       - name: Generate checksums
         shell: pwsh
         run: |

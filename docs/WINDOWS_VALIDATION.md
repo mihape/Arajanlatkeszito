@@ -95,6 +95,12 @@ After `npm run build:win`, the workflow also starts the packaged unpacked execut
 npm run smoke:packaged:release
 ```
 
+The workflow then installs the generated NSIS setup into a temporary folder and starts the installed executable:
+
+```powershell
+npm run smoke:installer:release
+```
+
 The smoke run uses a temporary user data directory and prints a single JSON line prefixed with:
 
 ```text
@@ -110,8 +116,10 @@ Expected CI evidence:
 - demo mode renders `AJ-2026-0001`
 - SQLite adapter is ready and exposes a database path
 - packaged `dist/win-unpacked/Nyilaszaro Ajanlatkeszito.exe` starts in release mode and passes the same no-demo-data checks
+- NSIS installer runs in silent mode into a temporary folder
+- installed `Nyilaszaro Ajanlatkeszito.exe` starts in release mode and passes the same no-demo-data checks
 
-This automated smoke is a startup and data-mode check for both development Electron and the unpacked packaged app. It does not replace the manual installed-app checks below, because it does not run the NSIS installer, click through the installed shortcut, visually inspect PDFs, or validate backup restore after a real installer run.
+This automated smoke is a startup and data-mode check for development Electron, the unpacked packaged app and a silent-installed app. It does not replace the manual installed-app checks below, because it does not click through the installed shortcut, visually inspect PDFs, or validate backup restore after a real installer run.
 
 ## PDF checks
 
