@@ -1,5 +1,8 @@
 const assert = require("assert");
+const path = require("path");
 const { parseArgs, resolveLaunchTarget } = require("../scripts/electron-smoke");
+
+const root = path.resolve(__dirname, "..");
 
 function test(name, fn) {
   try {
@@ -30,7 +33,7 @@ test("Electron smoke parser accepts packaged app path", () => {
   ]);
   assert.equal(options.mode, "release");
   assert.equal(options.app, "dist\\win-unpacked\\Nyilaszaro Ajanlatkeszito.exe");
-  assert(options.pdfDir.endsWith(".tmp-tests/pdf"));
+  assert.equal(options.pdfDir, path.join(root, ".tmp-tests/pdf"));
   assert.equal(options.pdfModes, "customer");
 });
 
