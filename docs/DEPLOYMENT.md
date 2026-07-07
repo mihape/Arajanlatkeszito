@@ -82,6 +82,7 @@ CI validation:
 - `npm run smoke:electron:demo` starts Electron with fictional demo data and verifies that `Demo Partner Kft.` and `AJ-2026-0001` render.
 - Both smoke runs also verify that the SQLite adapter is ready and reports a database path.
 - These checks run in the Windows build workflow before installer creation.
+- `npm run smoke:packaged:release` runs after `npm run build:win` and starts the packaged `dist/win-unpacked/Nyilaszaro Ajanlatkeszito.exe` with the same release-mode no-demo-data and SQLite-ready checks.
 
 ## Demo Mode
 

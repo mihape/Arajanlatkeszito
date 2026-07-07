@@ -91,11 +91,12 @@ A `Build Windows` workflow sorrendje:
 - `npm run smoke:electron:release`
 - `npm run smoke:electron:demo`
 - `npm run build:win`
+- `npm run smoke:packaged:release`
 - `CHECKSUMS.txt` generalas
 - artifact feltoltes
 - tag eseten release asset feltoltes
 
-Az Electron smoke csak az app indulast, release/demo adatmodot es SQLite adapter indulast bizonyitja Windows runneren. A telepitett installer kezi ellenorzese tovabbra is kulon release kapu.
+Az Electron smoke a fejlesztoi Electron inditast, release/demo adatmodot es SQLite adapter indulast bizonyitja Windows runneren. A packaged smoke a `dist/win-unpacked` csomagolt exe release indulasat bizonyitja. Az NSIS telepito kezi telepitese, shortcutos inditas, PDF vizualis ellenorzes es backup visszatoltes tovabbra is kulon release kapu.
 
 ## Elso publikus push elotti lista
 

@@ -400,6 +400,8 @@ Added Windows workflow steps:
 ```bash
 npm run smoke:electron:release
 npm run smoke:electron:demo
+npm run build:win
+npm run smoke:packaged:release
 ```
 
 The smoke mode starts Electron with a temporary user data directory and prints:
@@ -425,7 +427,18 @@ Demo-mode expectations:
 - SQLite adapter reports `ready: true`
 - SQLite database path is present
 
-This closes part of the Electron startup risk in CI. The installed NSIS app still needs manual Windows validation for shortcut launch, PDF visual output and backup restore.
+Packaged-release expectations:
+
+- `dist/win-unpacked/Nyilaszaro Ajanlatkeszito.exe` exists after `npm run build:win`
+- packaged app starts on the Windows runner
+- dashboard rendered
+- empty quote state rendered
+- no `Demo Partner Kft.`
+- no `AJ-2026-0001`
+- SQLite adapter reports `ready: true`
+- SQLite database path is present
+
+This closes part of the Electron startup risk in CI for both development Electron and the unpacked packaged executable. The installed NSIS app still needs manual Windows validation for installer launch, shortcut launch, PDF visual output and backup restore.
 
 Verified run:
 

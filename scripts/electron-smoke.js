@@ -4,6 +4,8 @@ const path = require("path");
 const { spawn } = require("child_process");
 const electron = require("electron");
 
+const root = path.resolve(__dirname, "..");
+
 function main(argv = process.argv.slice(2), env = process.env) {
   const options = parseArgs(argv);
   if (options.help || !options.mode) {
@@ -11,9 +13,15 @@ function main(argv = process.argv.slice(2), env = process.env) {
     return options.help ? 0 : 1;
   }
 
+  const launch = resolveLaunchTarget(options);
+  if (!launch.ok) {
+    console.error(launch.error);
+    return 1;
+  }
+
   const userDataDir = options.userDataDir || fs.mkdtempSync(path.join(os.tmpdir(), `nyilaszaro-smoke-${options.mode}-`));
-  const child = spawn(electron, ["."], {
-    cwd: path.resolve(__dirname, ".."),
+  const child = spawn(launch.command, launch.args, {
+    cwd: root,
     stdio: "inherit",
     env: {
       ...env,
@@ -53,6 +61,7 @@ function parseArgs(argv) {
     mode: "",
     timeoutMs: 20000,
     userDataDir: "",
+    app: "",
     help: false
   };
 
@@ -61,6 +70,7 @@ function parseArgs(argv) {
     if (arg === "demo" || arg === "release") options.mode = arg;
     else if (arg === "--timeout-ms") options.timeoutMs = Number(argv[++index] || options.timeoutMs);
     else if (arg === "--user-data-dir") options.userDataDir = argv[++index] || "";
+    else if (arg === "--app") options.app = argv[++index] || "";
     else if (arg === "--help") options.help = true;
   }
 
@@ -68,8 +78,34 @@ function parseArgs(argv) {
   return options;
 }
 
+function resolveLaunchTarget(options) {
+  if (!options.app) {
+    return {
+      ok: true,
+      command: electron,
+      args: ["."],
+      type: "dev-electron"
+    };
+  }
+
+  const appPath = path.resolve(root, options.app);
+  if (!fs.existsSync(appPath)) {
+    return {
+      ok: false,
+      error: `Packaged app was not found: ${appPath}`
+    };
+  }
+
+  return {
+    ok: true,
+    command: appPath,
+    args: [],
+    type: "packaged-app"
+  };
+}
+
 function printUsage() {
-  console.log("Usage: node scripts/electron-smoke.js <release|demo> [--timeout-ms 20000] [--user-data-dir <path>]");
+  console.log("Usage: node scripts/electron-smoke.js <release|demo> [--app <exe-path>] [--timeout-ms 20000] [--user-data-dir <path>]");
 }
 
 if (require.main === module) {
@@ -78,5 +114,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  parseArgs
+  parseArgs,
+  resolveLaunchTarget
 };
