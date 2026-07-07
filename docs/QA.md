@@ -215,6 +215,39 @@ Validated:
 npm run check
 ```
 
+## 2026-07-07 Public repo safety audit
+
+Scope:
+
+- current tracked files
+- Git history file names
+- ignored/generated local artifacts
+- demo data strings
+- release/tag state
+
+Commands/evidence:
+
+- `git ls-files`: 41 tracked files, all source/docs/config/test files.
+- Tracked artifact search found no `.db`, `.sqlite`, `.pdf`, `.xlsx`, `.xls`, `.csv`, `.tsv`, archive, backup JSON or handoff files.
+- `git log --all --name-only` search found no historical handoff, database, backup, PDF, spreadsheet or archive file names.
+- `.gitignore` covers `dist/`, `.tmp-tests/`, local SQLite/database files, backup JSON files, logs and handoff notes.
+- Demo-data search found only fictional data and documentation/test references:
+  - `Demo Partner Kft.`
+  - `Példa utca`
+  - `example.invalid`
+  - dummy `+36 30 000 0000/0001` phone values
+- No Git tags exist yet, so no first tagged release has been created.
+
+Local ignored artifacts:
+
+- `.tmp-tests/` contains generated SQLite files from adapter tests.
+- These files are ignored and not part of the public repository.
+
+Result:
+
+- Current repository content is public-repo safe based on tracked files and Git history file-name checks.
+- Final #1 release gate should remain open until the actual first tagged release is prepared and reviewed one more time.
+
 ## 2026-07-06 Dashboard workflow check
 
 Implemented:
