@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
+const fs = require("fs");
 const path = require("path");
 const { DATA_CHANNELS } = require("../shared/storage-contract");
 const { createSqliteAdapter } = require("./database");
@@ -98,9 +99,10 @@ function attachSmokeCheck(window, appMode) {
       })()`);
       const database = dataAdapter.getStatus();
       const errors = validateSmokeResult(expectedMode, dom, database);
+      const pdf = await runPdfSmoke(window);
       clearTimeout(timeout);
       finishSmoke({
-        ok: errors.length === 0,
+        ok: errors.length === 0 && (!pdf || pdf.ok),
         mode: expectedMode,
         dom,
         database: {
@@ -109,6 +111,7 @@ function attachSmokeCheck(window, appMode) {
           path: database.path || "",
           counts: database.counts || {}
         },
+        pdf,
         errors
       });
     } catch (error) {
@@ -120,6 +123,71 @@ function attachSmokeCheck(window, appMode) {
       });
     }
   });
+}
+
+async function runPdfSmoke(window) {
+  const pdfDir = process.env.NYILASZARO_SMOKE_PDF_DIR;
+  if (!pdfDir) return null;
+
+  fs.mkdirSync(pdfDir, { recursive: true });
+  const modes = String(process.env.NYILASZARO_SMOKE_PDF_MODES || "customer,internal")
+    .split(",")
+    .map((mode) => mode.trim())
+    .filter(Boolean);
+  const results = [];
+
+  for (const mode of modes) {
+    const normalizedMode = mode === "internal" ? "internal" : "customer";
+    const prepared = await window.webContents.executeJavaScript(`(async () => {
+      ui.printMode = ${JSON.stringify(normalizedMode)};
+      render();
+      document.body.classList.toggle("print-internal", ui.printMode === "internal");
+      document.body.classList.toggle("print-customer", ui.printMode !== "internal");
+      await waitForPrintRender();
+      const text = document.body ? document.body.innerText : "";
+      return {
+        hasPrintSheet: Boolean(document.querySelector(".print-sheet")),
+        hasQuoteNumber: text.includes("AJ-2026-0001"),
+        hasGrossTotal: text.includes("Fizetendő bruttó")
+      };
+    })()`);
+    const buffer = await window.webContents.printToPDF({
+      printBackground: true,
+      pageSize: "A4",
+      landscape: false,
+      preferCSSPageSize: true
+    });
+    const filePath = path.join(pdfDir, `smoke-${normalizedMode}.pdf`);
+    fs.writeFileSync(filePath, buffer);
+    results.push({
+      mode: normalizedMode,
+      path: filePath,
+      bytes: buffer.length,
+      prepared
+    });
+  }
+
+  const errors = results.flatMap((result) => {
+    const resultErrors = [];
+    if (result.bytes < 1000) resultErrors.push(`${result.mode} PDF was too small.`);
+    if (!result.prepared.hasPrintSheet) resultErrors.push(`${result.mode} print sheet was not rendered.`);
+    if (!result.prepared.hasQuoteNumber) resultErrors.push(`${result.mode} print sheet did not include the demo quote number.`);
+    if (!result.prepared.hasGrossTotal) resultErrors.push(`${result.mode} print sheet did not include gross total text.`);
+    return resultErrors;
+  });
+
+  await window.webContents.executeJavaScript(`(() => {
+    document.body.classList.remove("print-internal", "print-customer");
+    ui.printMode = "customer";
+    render();
+  })()`);
+
+  return {
+    ok: errors.length === 0,
+    dir: pdfDir,
+    results,
+    errors
+  };
 }
 
 function validateSmokeResult(expectedMode, dom, database) {

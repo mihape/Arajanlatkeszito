@@ -19,9 +19,19 @@ test("Electron smoke parser accepts release mode and custom timeout", () => {
 });
 
 test("Electron smoke parser accepts packaged app path", () => {
-  const options = parseArgs(["release", "--app", "dist\\win-unpacked\\Nyilaszaro Ajanlatkeszito.exe"]);
+  const options = parseArgs([
+    "release",
+    "--app",
+    "dist\\win-unpacked\\Nyilaszaro Ajanlatkeszito.exe",
+    "--pdf-dir",
+    ".tmp-tests/pdf",
+    "--pdf-modes",
+    "customer"
+  ]);
   assert.equal(options.mode, "release");
   assert.equal(options.app, "dist\\win-unpacked\\Nyilaszaro Ajanlatkeszito.exe");
+  assert(options.pdfDir.endsWith(".tmp-tests/pdf"));
+  assert.equal(options.pdfModes, "customer");
 });
 
 test("Electron smoke parser accepts demo mode", () => {

@@ -6,6 +6,7 @@ const {
   coerceTimeout,
   findInstaller,
   installedAppPath,
+  normalizeMode,
   parseArgs
 } = require("../scripts/installer-smoke");
 
@@ -25,10 +26,16 @@ test("Installer smoke parser accepts explicit paths and timeouts", () => {
   const options = parseArgs([
     "--installer",
     "dist/setup.exe",
+    "--mode",
+    "demo",
     "--install-dir",
     ".tmp-tests/install",
     "--user-data-dir",
     ".tmp-tests/user-data",
+    "--pdf-dir",
+    ".tmp-tests/pdf",
+    "--pdf-modes",
+    "internal",
     "--install-timeout-ms",
     "90000",
     "--wait-timeout-ms",
@@ -38,8 +45,11 @@ test("Installer smoke parser accepts explicit paths and timeouts", () => {
   ]);
 
   assert.equal(options.installer, path.join(root, "dist/setup.exe"));
+  assert.equal(options.mode, "demo");
   assert.equal(options.installDir, path.join(root, ".tmp-tests/install"));
   assert.equal(options.userDataDir, path.join(root, ".tmp-tests/user-data"));
+  assert.equal(options.pdfDir, path.join(root, ".tmp-tests/pdf"));
+  assert.equal(options.pdfModes, "internal");
   assert.equal(options.installTimeoutMs, 90000);
   assert.equal(options.waitTimeoutMs, 10000);
   assert.equal(options.smokeTimeoutMs, 15000);
@@ -61,4 +71,10 @@ test("Installer smoke builds installed app path", () => {
 test("Installer smoke timeout coercion rejects tiny values", () => {
   assert.equal(coerceTimeout("10", 120000), 120000);
   assert.equal(coerceTimeout("5000", 120000), 5000);
+});
+
+test("Installer smoke mode coercion accepts only release and demo", () => {
+  assert.equal(normalizeMode("demo", "release"), "demo");
+  assert.equal(normalizeMode("release", "demo"), "release");
+  assert.equal(normalizeMode("other", "release"), "release");
 });

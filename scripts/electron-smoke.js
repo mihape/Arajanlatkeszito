@@ -29,7 +29,9 @@ function main(argv = process.argv.slice(2), env = process.env) {
       NYILASZARO_SMOKE: "1",
       NYILASZARO_SMOKE_EXPECT: options.mode,
       NYILASZARO_SMOKE_TIMEOUT_MS: String(options.timeoutMs),
-      NYILASZARO_USER_DATA_DIR: userDataDir
+      NYILASZARO_USER_DATA_DIR: userDataDir,
+      NYILASZARO_SMOKE_PDF_DIR: options.pdfDir,
+      NYILASZARO_SMOKE_PDF_MODES: options.pdfModes
     }
   });
 
@@ -62,6 +64,8 @@ function parseArgs(argv) {
     timeoutMs: 20000,
     userDataDir: "",
     app: "",
+    pdfDir: "",
+    pdfModes: "customer,internal",
     help: false
   };
 
@@ -71,6 +75,8 @@ function parseArgs(argv) {
     else if (arg === "--timeout-ms") options.timeoutMs = Number(argv[++index] || options.timeoutMs);
     else if (arg === "--user-data-dir") options.userDataDir = argv[++index] || "";
     else if (arg === "--app") options.app = argv[++index] || "";
+    else if (arg === "--pdf-dir") options.pdfDir = path.resolve(root, argv[++index] || "");
+    else if (arg === "--pdf-modes") options.pdfModes = argv[++index] || options.pdfModes;
     else if (arg === "--help") options.help = true;
   }
 
@@ -105,7 +111,7 @@ function resolveLaunchTarget(options) {
 }
 
 function printUsage() {
-  console.log("Usage: node scripts/electron-smoke.js <release|demo> [--app <exe-path>] [--timeout-ms 20000] [--user-data-dir <path>]");
+  console.log("Usage: node scripts/electron-smoke.js <release|demo> [--app <exe-path>] [--pdf-dir <path>] [--pdf-modes customer,internal] [--timeout-ms 20000] [--user-data-dir <path>]");
 }
 
 if (require.main === module) {

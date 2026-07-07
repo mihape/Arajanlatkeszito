@@ -40,6 +40,9 @@ jobs:
       - name: Smoke test silent installer release app
         run: npm run smoke:installer:release
 
+      - name: Smoke test installed app PDF export
+        run: npm run smoke:installer:pdf
+
       - name: Generate checksums
         shell: pwsh
         run: |

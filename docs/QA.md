@@ -403,6 +403,7 @@ npm run smoke:electron:demo
 npm run build:win
 npm run smoke:packaged:release
 npm run smoke:installer:release
+npm run smoke:installer:pdf
 ```
 
 The smoke mode starts Electron with a temporary user data directory and prints:
@@ -452,7 +453,16 @@ Installer-release expectations:
 - SQLite adapter reports `ready: true`
 - SQLite database path is present
 
-This closes part of the Electron startup risk in CI for development Electron, the unpacked packaged executable and a silent-installed executable. The app still needs manual Windows validation for visible installer launch, shortcut/Start menu launch, PDF visual output and backup restore.
+Installed-app PDF expectations:
+
+- NSIS setup exits successfully in silent mode
+- installed app starts in demo mode
+- demo quote print sheet is rendered
+- customer PDF file is written
+- internal PDF file is written
+- generated PDF files are non-empty
+
+This closes part of the Electron startup and PDF file-generation risk in CI for development Electron, the unpacked packaged executable and a silent-installed executable. The app still needs manual Windows validation for visible installer launch, shortcut/Start menu launch, PDF visual layout and backup restore.
 
 Verified run:
 

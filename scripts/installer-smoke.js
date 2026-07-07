@@ -21,6 +21,7 @@ async function main(argv = process.argv.slice(2)) {
 
   const installDir = options.installDir || fs.mkdtempSync(path.join(os.tmpdir(), "nyilaszaro-installed-"));
   const userDataDir = options.userDataDir || fs.mkdtempSync(path.join(os.tmpdir(), "nyilaszaro-installed-userdata-"));
+  const pdfDir = options.pdfDir || "";
   const installedApp = installedAppPath(installDir);
 
   console.log(`# Installer smoke\n`);
@@ -42,13 +43,14 @@ async function main(argv = process.argv.slice(2)) {
 
   const smokeCode = await runCommand(process.execPath, [
     path.join(root, "scripts/electron-smoke.js"),
-    "release",
+    options.mode,
     "--app",
     installedApp,
     "--user-data-dir",
     userDataDir,
     "--timeout-ms",
-    String(options.smokeTimeoutMs)
+    String(options.smokeTimeoutMs),
+    ...(pdfDir ? ["--pdf-dir", pdfDir, "--pdf-modes", options.pdfModes] : [])
   ], options.smokeTimeoutMs + 5000);
 
   if (smokeCode !== 0) return smokeCode || 1;
@@ -61,9 +63,12 @@ async function main(argv = process.argv.slice(2)) {
 function parseArgs(argv) {
   const options = {
     distDir: "dist",
+    mode: "release",
     installer: "",
     installDir: "",
     userDataDir: "",
+    pdfDir: "",
+    pdfModes: "customer,internal",
     installTimeoutMs: 120000,
     waitTimeoutMs: 30000,
     smokeTimeoutMs: 20000,
@@ -73,9 +78,12 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--dist") options.distDir = argv[++index] || options.distDir;
+    else if (arg === "--mode") options.mode = normalizeMode(argv[++index], options.mode);
     else if (arg === "--installer") options.installer = path.resolve(root, argv[++index] || "");
     else if (arg === "--install-dir") options.installDir = path.resolve(root, argv[++index] || "");
     else if (arg === "--user-data-dir") options.userDataDir = path.resolve(root, argv[++index] || "");
+    else if (arg === "--pdf-dir") options.pdfDir = path.resolve(root, argv[++index] || "");
+    else if (arg === "--pdf-modes") options.pdfModes = argv[++index] || options.pdfModes;
     else if (arg === "--install-timeout-ms") options.installTimeoutMs = coerceTimeout(argv[++index], options.installTimeoutMs);
     else if (arg === "--wait-timeout-ms") options.waitTimeoutMs = coerceTimeout(argv[++index], options.waitTimeoutMs);
     else if (arg === "--smoke-timeout-ms") options.smokeTimeoutMs = coerceTimeout(argv[++index], options.smokeTimeoutMs);
@@ -83,6 +91,10 @@ function parseArgs(argv) {
   }
 
   return options;
+}
+
+function normalizeMode(value, fallback) {
+  return value === "demo" || value === "release" ? value : fallback;
 }
 
 function findInstaller(distDir = "dist") {
@@ -149,7 +161,7 @@ function delay(ms) {
 }
 
 function printUsage() {
-  console.log("Usage: node scripts/installer-smoke.js [--installer <setup.exe>] [--install-dir <path>] [--user-data-dir <path>]");
+  console.log("Usage: node scripts/installer-smoke.js [--mode release|demo] [--installer <setup.exe>] [--install-dir <path>] [--user-data-dir <path>] [--pdf-dir <path>]");
 }
 
 if (require.main === module) {
@@ -166,5 +178,6 @@ module.exports = {
   parseArgs,
   findInstaller,
   installedAppPath,
-  coerceTimeout
+  coerceTimeout,
+  normalizeMode
 };

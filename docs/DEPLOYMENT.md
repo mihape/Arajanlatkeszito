@@ -84,6 +84,7 @@ CI validation:
 - These checks run in the Windows build workflow before installer creation.
 - `npm run smoke:packaged:release` runs after `npm run build:win` and starts the packaged `dist/win-unpacked/Nyilaszaro Ajanlatkeszito.exe` with the same release-mode no-demo-data and SQLite-ready checks.
 - `npm run smoke:installer:release` runs the generated NSIS installer in silent mode into a temporary folder, then starts the installed executable with the same release-mode no-demo-data and SQLite-ready checks.
+- `npm run smoke:installer:pdf` runs the silent-installed app in demo mode and verifies that customer/internal PDF files can be generated through Electron `printToPDF`.
 
 ## Demo Mode
 

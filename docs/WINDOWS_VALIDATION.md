@@ -101,6 +101,12 @@ The workflow then installs the generated NSIS setup into a temporary folder and 
 npm run smoke:installer:release
 ```
 
+It also runs a demo-mode installed-app PDF export smoke:
+
+```powershell
+npm run smoke:installer:pdf
+```
+
 The smoke run uses a temporary user data directory and prints a single JSON line prefixed with:
 
 ```text
@@ -118,8 +124,9 @@ Expected CI evidence:
 - packaged `dist/win-unpacked/Nyilaszaro Ajanlatkeszito.exe` starts in release mode and passes the same no-demo-data checks
 - NSIS installer runs in silent mode into a temporary folder
 - installed `Nyilaszaro Ajanlatkeszito.exe` starts in release mode and passes the same no-demo-data checks
+- installed app starts in demo mode and writes customer/internal PDF files through Electron `printToPDF`
 
-This automated smoke is a startup and data-mode check for development Electron, the unpacked packaged app and a silent-installed app. It does not replace the manual installed-app checks below, because it does not click through the installed shortcut, visually inspect PDFs, or validate backup restore after a real installer run.
+This automated smoke is a startup, data-mode and PDF file-generation check for development Electron, the unpacked packaged app and a silent-installed app. It does not replace the manual installed-app checks below, because it does not click through the installed shortcut, visually inspect PDF layout, or validate backup restore after a real installer run.
 
 ## PDF checks
 
