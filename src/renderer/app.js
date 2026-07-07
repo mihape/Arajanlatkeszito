@@ -1,9 +1,14 @@
 const DB_KEY = "nyilaszaro-ajanlatkeszito-v1";
 const APP_MODE = getAppMode();
 const pricing = window.NyilaszaroPricing;
+const matrixImport = window.NyilaszaroMatrixImport;
 
 if (!pricing) {
   throw new Error("Pricing module is not loaded.");
+}
+
+if (!matrixImport) {
+  throw new Error("Matrix import module is not loaded.");
 }
 
 const productTypes = [
@@ -62,6 +67,7 @@ let ui = {
   quoteCreatedFrom: "",
   quoteDeadlineFilter: "",
   quoteSearch: "",
+  matrixImportReport: null,
   itemDraft: createDefaultItem(state),
   customerDraft: createCustomerDraft(),
   profileDraft: createProfileDraft(),
@@ -1943,8 +1949,27 @@ function renderMatricesView() {
         <div class="actions" style="justify-content: flex-start;">
           <button class="button" data-action="import-matrix">${icon("upload")}Beillesztett mátrix importálása</button>
         </div>
+        ${renderMatrixImportReport()}
       </div>
     </section>
+  `;
+}
+
+function renderMatrixImportReport() {
+  const report = ui.matrixImportReport;
+  if (!report) return "";
+  return `
+    <div class="${report.ok ? "warning-box" : "warning-box danger"}">
+      ${icon(report.ok ? "check" : "alert")}
+      <div>
+        <strong>${report.ok ? "Import ellenőrzés rendben" : "Import hibákat talált"}</strong><br />
+        ${report.target ? `Cél: ${esc(report.target)}<br />` : ""}
+        Importált árak: ${number(report.stats.importedPrices)} · Nem gyártható cellák: ${number(report.stats.blockedCells)} · Hiányzó: ${number(report.stats.missingCells)} · Hibás: ${number(report.stats.invalidCells)}
+        ${report.errors?.length ? `<ul>${report.errors.slice(0, 8).map((error) => `<li>${esc(error)}</li>`).join("")}</ul>` : ""}
+        ${report.errors?.length > 8 ? `<div>+ ${number(report.errors.length - 8)} további hiba.</div>` : ""}
+        ${report.warnings?.length ? `<ul>${report.warnings.slice(0, 5).map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul>` : ""}
+      </div>
+    </div>
   `;
 }
 
@@ -2995,33 +3020,21 @@ function fillSelectedMatrix() {
 function importMatrix() {
   const matrix = getSelectedMatrix();
   const value = document.getElementById("matrixPaste")?.value || "";
-  const lines = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (!lines.length) {
-    showToast("Nincs beillesztett mátrix.");
+  const profile = getProfile(ui.selectedMatrixProfileId) || state.catalog.profiles[0];
+  const opening = exteriorOpeningTypes().find((item) => item.id === ui.selectedMatrixProductType) || exteriorOpeningTypes()[0];
+  const report = matrixImport.parseMatrixImport(value, matrix);
+  report.target = `${profile?.manufacturer || ""} · ${profile?.name || ""} · ${opening?.name || ""}`.trim();
+  ui.matrixImportReport = report;
+  if (!report.ok) {
+    render();
+    showToast("A mátrix import hibákat tartalmaz, ezért nem mentettem.");
     return;
   }
-  const rows = lines.map((line) => line.split(/\t|;|,/).map((cell) => cell.trim()));
-  const header = rows[0].slice(1).map(Number).filter(Boolean);
-  const hasHeader = header.length > 0;
-  if (hasHeader) {
-    rows.slice(1).forEach((row) => {
-      const height = Number(row[0]);
-      row.slice(1).forEach((cell, index) => {
-        const width = header[index];
-        if (width && height) matrix.prices[`${width}x${height}`] = Number(cell.replace(/\s/g, "")) || 0;
-      });
-    });
-  } else {
-    rows.forEach((row, rowIndex) => {
-      const height = matrix.heights[rowIndex];
-      row.forEach((cell, colIndex) => {
-        const width = matrix.widths[colIndex];
-        if (width && height) matrix.prices[`${width}x${height}`] = Number(cell.replace(/\s/g, "")) || 0;
-      });
-    });
-  }
+  matrix.prices = { ...matrix.prices, ...report.prices };
+  matrix.blocked = { ...(matrix.blocked || {}), ...report.blocked };
   saveState();
-  showToast("Mátrix importálva.");
+  render();
+  showToast("Mátrix importálva és ellenőrizve.");
 }
 
 function addCatalogRow(collection) {

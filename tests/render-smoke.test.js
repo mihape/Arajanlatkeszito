@@ -48,6 +48,7 @@ function renderApp(search) {
 
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(root, "src/shared/pricing-calculations.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(root, "src/shared/matrix-import.js"), "utf8"), context);
   vm.runInContext(fs.readFileSync(path.join(root, "src/renderer/app.js"), "utf8"), context);
   return appElement.innerHTML;
 }
@@ -55,11 +56,14 @@ function renderApp(search) {
 test("renderer index loads shared pricing before app", () => {
   const html = fs.readFileSync(path.join(root, "src/renderer/index.html"), "utf8");
   const pricingIndex = html.indexOf("../shared/pricing-calculations.js");
+  const matrixImportIndex = html.indexOf("../shared/matrix-import.js");
   const appIndex = html.indexOf("app.js");
 
   assert(pricingIndex > -1, "pricing module script is missing");
+  assert(matrixImportIndex > -1, "matrix import module script is missing");
   assert(appIndex > -1, "app script is missing");
   assert(pricingIndex < appIndex, "pricing module must load before app.js");
+  assert(matrixImportIndex < appIndex, "matrix import module must load before app.js");
 });
 
 test("release mode starts without demo customer or quote", () => {

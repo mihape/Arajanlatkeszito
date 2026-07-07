@@ -81,6 +81,7 @@ Cel: gyartoi arak gyorsabb felvitele.
 
 - Matrix import sablon CSV/Excel iranybol.
 - Hibajelzes hianyzo vagy rossz cellakra.
+- Elso CSV/TSV matrix import validator: hianyzo cella, hibas ar, nem gyarthato jeloles es import riport mentés elott.
 - Gyarto/profil/nyitastipus szerinti arlista verzio.
 - Belteri ajto modell import.
 - Redony/szunyoghalo/beepites import.

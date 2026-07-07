@@ -198,6 +198,23 @@ Reason:
 WSL (2 - ) ERROR: UtilBindVsockAnyPort:307: socket failed 1
 ```
 
+## 2026-07-07 Matrix import validation check
+
+Implemented:
+
+- `src/shared/matrix-import.js`
+- CSV/TSV parser with header-based and no-header modes
+- missing cell validation
+- invalid price validation
+- blocked/non-manufacturable cell markers: `x`, `nem`, `tilt`, `blocked`, `-`, `n/a`
+- renderer import report before saving invalid imports
+
+Validated:
+
+```bash
+npm run check
+```
+
 ## 2026-07-06 Dashboard workflow check
 
 Implemented:
