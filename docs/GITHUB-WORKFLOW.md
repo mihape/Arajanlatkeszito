@@ -82,6 +82,21 @@ Minden PR tartalmazza:
 - erint-e arszamitast vagy PDF-et
 - van-e adatbazis/migracio hatasa
 
+## Windows build workflow kapuk
+
+A `Build Windows` workflow sorrendje:
+
+- `npm ci`
+- `npm run check`
+- `npm run smoke:electron:release`
+- `npm run smoke:electron:demo`
+- `npm run build:win`
+- `CHECKSUMS.txt` generalas
+- artifact feltoltes
+- tag eseten release asset feltoltes
+
+Az Electron smoke csak az app indulast, release/demo adatmodot es SQLite adapter indulast bizonyitja Windows runneren. A telepitett installer kezi ellenorzese tovabbra is kulon release kapu.
+
 ## Elso publikus push elotti lista
 
 - Ellenorizni kell, hogy minden mintaadat fiktiv.

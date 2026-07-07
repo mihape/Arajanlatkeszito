@@ -80,6 +80,32 @@ Expected release-mode development state:
 - no demo quote
 - app still renders the dashboard and settings screens
 
+## Automated Electron smoke in CI
+
+The `Build Windows` GitHub Actions workflow also starts the Electron app on the Windows runner before building the installer:
+
+```powershell
+npm run smoke:electron:release
+npm run smoke:electron:demo
+```
+
+The smoke run uses a temporary user data directory and prints a single JSON line prefixed with:
+
+```text
+NYILASZARO_ELECTRON_SMOKE_RESULT
+```
+
+Expected CI evidence:
+
+- release mode renders the dashboard and empty quote state
+- release mode does not render `Demo Partner Kft.`
+- release mode does not render `AJ-2026-0001`
+- demo mode renders `Demo Partner Kft.`
+- demo mode renders `AJ-2026-0001`
+- SQLite adapter is ready and exposes a database path
+
+This automated smoke is a startup and data-mode check. It does not replace the manual installed-app checks below, because it does not click through the installed shortcut, visually inspect PDFs, or validate backup restore after a real installer run.
+
 ## PDF checks
 
 Use either a newly created quote or the demo quote in demo mode.

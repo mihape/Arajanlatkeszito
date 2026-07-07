@@ -6,6 +6,10 @@ const { registerPdfHandlers } = require("./pdf-export");
 
 let dataAdapter;
 
+if (process.env.NYILASZARO_USER_DATA_DIR) {
+  app.setPath("userData", process.env.NYILASZARO_USER_DATA_DIR);
+}
+
 function createMainWindow() {
   const appMode = getAppMode();
   const window = new BrowserWindow({
@@ -22,6 +26,10 @@ function createMainWindow() {
       sandbox: true
     }
   });
+
+  if (process.env.NYILASZARO_SMOKE === "1") {
+    attachSmokeCheck(window, appMode);
+  }
 
   window.loadFile(path.join(__dirname, "../renderer/index.html"), {
     query: { mode: appMode }
@@ -53,6 +61,90 @@ function getAppMode() {
   const requestedMode = process.env.NYILASZARO_APP_MODE;
   if (requestedMode === "demo" || requestedMode === "release") return requestedMode;
   return app.isPackaged ? "release" : "demo";
+}
+
+function attachSmokeCheck(window, appMode) {
+  const expectedMode = process.env.NYILASZARO_SMOKE_EXPECT || appMode;
+  const timeout = setTimeout(() => {
+    finishSmoke({
+      ok: false,
+      mode: expectedMode,
+      error: "Renderer did not finish loading before the smoke timeout."
+    });
+  }, Number(process.env.NYILASZARO_SMOKE_TIMEOUT_MS || 20000));
+
+  window.webContents.once("did-fail-load", (_event, errorCode, errorDescription) => {
+    clearTimeout(timeout);
+    finishSmoke({
+      ok: false,
+      mode: expectedMode,
+      error: `Renderer failed to load: ${errorCode} ${errorDescription}`
+    });
+  });
+
+  window.webContents.once("did-finish-load", async () => {
+    try {
+      const dom = await window.webContents.executeJavaScript(`(() => {
+        const text = document.body ? document.body.innerText : "";
+        return {
+          title: document.title,
+          hasDashboard: text.includes("Ajánlatok dashboard"),
+          hasEmptyQuoteState: text.includes("Még nincs ajánlat."),
+          hasDemoCustomer: text.includes("Demo Partner Kft."),
+          hasDemoQuote: text.includes("AJ-2026-0001"),
+          quoteCountZero: text.includes("0 db"),
+          quoteCountOne: text.includes("1 db")
+        };
+      })()`);
+      const database = dataAdapter.getStatus();
+      const errors = validateSmokeResult(expectedMode, dom, database);
+      clearTimeout(timeout);
+      finishSmoke({
+        ok: errors.length === 0,
+        mode: expectedMode,
+        dom,
+        database: {
+          engine: database.engine,
+          ready: database.ready,
+          path: database.path || "",
+          counts: database.counts || {}
+        },
+        errors
+      });
+    } catch (error) {
+      clearTimeout(timeout);
+      finishSmoke({
+        ok: false,
+        mode: expectedMode,
+        error: error?.message || String(error)
+      });
+    }
+  });
+}
+
+function validateSmokeResult(expectedMode, dom, database) {
+  const errors = [];
+  if (!dom.hasDashboard) errors.push("Dashboard heading was not rendered.");
+  if (!database.ready) errors.push("SQLite adapter is not ready.");
+  if (!database.path) errors.push("SQLite database path is missing.");
+
+  if (expectedMode === "release") {
+    if (!dom.hasEmptyQuoteState) errors.push("Release mode did not render the empty quote state.");
+    if (dom.hasDemoCustomer) errors.push("Release mode rendered Demo Partner Kft.");
+    if (dom.hasDemoQuote) errors.push("Release mode rendered AJ-2026-0001.");
+  }
+
+  if (expectedMode === "demo") {
+    if (!dom.hasDemoCustomer) errors.push("Demo mode did not render Demo Partner Kft.");
+    if (!dom.hasDemoQuote) errors.push("Demo mode did not render AJ-2026-0001.");
+  }
+
+  return errors;
+}
+
+function finishSmoke(report) {
+  console.log(`NYILASZARO_ELECTRON_SMOKE_RESULT ${JSON.stringify(report)}`);
+  app.exit(report.ok ? 0 : 1);
 }
 
 app.on("window-all-closed", () => {

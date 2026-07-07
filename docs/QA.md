@@ -382,6 +382,40 @@ Follow-up:
 
 - workflow artifact glob was narrowed after this run so future artifacts and release assets include only top-level installer `.exe` files plus `CHECKSUMS.txt`
 
+## 2026-07-07 Electron CI Smoke Gate
+
+Added Windows workflow steps:
+
+```bash
+npm run smoke:electron:release
+npm run smoke:electron:demo
+```
+
+The smoke mode starts Electron with a temporary user data directory and prints:
+
+```text
+NYILASZARO_ELECTRON_SMOKE_RESULT {...}
+```
+
+Release-mode expectations:
+
+- dashboard rendered
+- empty quote state rendered
+- no `Demo Partner Kft.`
+- no `AJ-2026-0001`
+- SQLite adapter reports `ready: true`
+- SQLite database path is present
+
+Demo-mode expectations:
+
+- dashboard rendered
+- `Demo Partner Kft.` rendered
+- `AJ-2026-0001` rendered
+- SQLite adapter reports `ready: true`
+- SQLite database path is present
+
+This closes part of the Electron startup risk in CI. The installed NSIS app still needs manual Windows validation for shortcut launch, PDF visual output and backup restore.
+
 ## 2026-07-03 GitHub Actions final artifact validation
 
 Run:

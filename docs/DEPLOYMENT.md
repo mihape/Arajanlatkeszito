@@ -76,6 +76,13 @@ Current behavior:
 - packaged Electron run: release mode
 - browser fallback without query string: demo mode
 
+CI validation:
+
+- `npm run smoke:electron:release` starts Electron with an isolated temporary user data directory and verifies that no demo customer or demo quote is rendered.
+- `npm run smoke:electron:demo` starts Electron with fictional demo data and verifies that `Demo Partner Kft.` and `AJ-2026-0001` render.
+- Both smoke runs also verify that the SQLite adapter is ready and reports a database path.
+- These checks run in the Windows build workflow before installer creation.
+
 ## Demo Mode
 
 Demo mode is allowed to include fictional sample data only.
