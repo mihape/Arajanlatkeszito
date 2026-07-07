@@ -58,6 +58,9 @@ let ui = {
   selectedInteriorModelId: state.catalog.interiorDoors?.models?.[0]?.id || "",
   selectedInteriorImageColorId: state.catalog.interiorDoors?.colors?.[0]?.id || "",
   quoteStatusFilter: "all",
+  quoteCustomerFilter: "all",
+  quoteCreatedFrom: "",
+  quoteDeadlineFilter: "",
   quoteSearch: "",
   itemDraft: createDefaultItem(state),
   customerDraft: createCustomerDraft(),
@@ -1024,7 +1027,7 @@ function renderQuotesDashboard() {
             <p class="panel-note">Kattints a Megnyitás gombra a részletes szerkesztőhöz. Szűrt találat: ${filteredQuotes.length} db.</p>
           </div>
         </div>
-        <div class="form-grid three" style="margin-bottom: 14px;">
+        <div class="form-grid four" style="margin-bottom: 14px;">
           <label>
             Keresés
             <input data-dashboard-search value="${esc(ui.quoteSearch)}" placeholder="Ajánlatszám, ügyfél, cím" />
@@ -1036,9 +1039,27 @@ function renderQuotesDashboard() {
             </select>
           </label>
           <label>
+            Ügyfél
+            <select data-dashboard-customer>
+              <option value="all" ${ui.quoteCustomerFilter === "all" ? "selected" : ""}>Összes ügyfél</option>
+              ${state.customers.map((customer) => `<option value="${esc(customer.id)}" ${ui.quoteCustomerFilter === customer.id ? "selected" : ""}>${esc(customer.name || "Névtelen ügyfél")}</option>`).join("")}
+            </select>
+          </label>
+          <label>
+            Készült ettől
+            <input type="date" data-dashboard-created-from value="${esc(ui.quoteCreatedFrom)}" />
+          </label>
+        </div>
+        <div class="form-grid three" style="margin-bottom: 14px;">
+          <label>
+            Határidő
+            <input data-dashboard-deadline value="${esc(ui.quoteDeadlineFilter)}" placeholder="pl. 6-8 hét" />
+          </label>
+          <label>
             Rendezés
             <input value="Legutóbb módosított elöl" disabled />
           </label>
+          <div></div>
         </div>
         <div class="table-wrap">
           <table class="dashboard-table">
@@ -1118,6 +1139,9 @@ function getFilteredQuotes() {
   const term = String(ui.quoteSearch || "").trim().toLowerCase();
   return state.quotes
     .filter((quote) => ui.quoteStatusFilter === "all" || quote.status === ui.quoteStatusFilter)
+    .filter((quote) => ui.quoteCustomerFilter === "all" || quote.customerId === ui.quoteCustomerFilter)
+    .filter((quote) => !ui.quoteCreatedFrom || String(quote.createdAt || "") >= ui.quoteCreatedFrom)
+    .filter((quote) => !ui.quoteDeadlineFilter || String(quote.productionDeadline || "").toLowerCase().includes(ui.quoteDeadlineFilter.toLowerCase()))
     .filter((quote) => {
       if (!term) return true;
       const customer = getCustomer(quote.customerId);
@@ -2356,6 +2380,16 @@ function handleInput(event) {
     render();
     return;
   }
+  if (target.dataset.dashboardCreatedFrom !== undefined) {
+    ui.quoteCreatedFrom = target.value;
+    render();
+    return;
+  }
+  if (target.dataset.dashboardDeadline !== undefined) {
+    ui.quoteDeadlineFilter = target.value;
+    render();
+    return;
+  }
   if (target.dataset.bindCustomer) {
     ui.customerDraft[target.dataset.bindCustomer] = target.value;
     return;
@@ -2407,6 +2441,11 @@ function handleChange(event) {
   const target = event.target;
   if (target.dataset.dashboardStatus !== undefined) {
     ui.quoteStatusFilter = target.value;
+    render();
+    return;
+  }
+  if (target.dataset.dashboardCustomer !== undefined) {
+    ui.quoteCustomerFilter = target.value;
     render();
     return;
   }

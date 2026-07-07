@@ -100,7 +100,7 @@ Cel: tobb kollega is atlathatoan tudja hasznalni.
 - Megrendelesi/gyartoi osszesito.
 - Statusz tortenet.
 - Automatikus backup emlekezteto.
-- Elso dashboard workflow szelet: statusz szuro, keresés, modositas datum, verzio es statusztortenet osszefoglalo.
+- Elso dashboard workflow szelet: statusz, ugyfel, datum es hatarido szurok, keresés, modositas datum, verzio es statusztortenet osszefoglalo.
 
 Elfogadasi feltetel:
 

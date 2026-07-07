@@ -170,6 +170,7 @@ Implemented:
 
 - quote dashboard search field
 - quote dashboard status filter
+- quote dashboard customer/date/deadline filters
 - quote version and updated date display
 - quote status history summary
 - version/status history preservation through normalized SQLite state rebuild

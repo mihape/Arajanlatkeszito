@@ -83,6 +83,9 @@ test("quotes dashboard renders workflow filters and version metadata", () => {
 
   assert(html.includes("data-dashboard-search"));
   assert(html.includes("data-dashboard-status"));
+  assert(html.includes("data-dashboard-customer"));
+  assert(html.includes("data-dashboard-created-from"));
+  assert(html.includes("data-dashboard-deadline"));
   assert(html.includes("Módosítva"));
   assert(html.includes("Verzió"));
   assert(html.includes("v1"));
