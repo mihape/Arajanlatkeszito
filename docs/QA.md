@@ -471,6 +471,27 @@ Demo smoke JSON summary:
 - SQLite `engine: node:sqlite`
 - SQLite `ready: true`
 
+Packaged release verified run:
+
+- run: `28862457145`
+- URL: `https://github.com/mihape/Arajanlatkeszito/actions/runs/28862457145`
+- commit: `f7f0564a3262a064f852615986e962fd3e41bdf0`
+- result: success
+- artifact: `nyilaszaro-windows-build`, artifact ID `8136258349`
+- artifact URL: `https://github.com/mihape/Arajanlatkeszito/actions/runs/28862457145/artifacts/8136258349`
+
+Packaged release smoke JSON summary:
+
+- `ok: true`
+- `mode: release`
+- `dist/win-unpacked/Nyilaszaro Ajanlatkeszito.exe` started on the Windows runner
+- dashboard rendered
+- empty quote state rendered
+- no `Demo Partner Kft.`
+- no `AJ-2026-0001`
+- SQLite `engine: node:sqlite`
+- SQLite `ready: true`
+
 ## 2026-07-03 GitHub Actions final artifact validation
 
 Run:
