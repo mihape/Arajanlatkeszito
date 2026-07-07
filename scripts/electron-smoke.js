@@ -15,7 +15,6 @@ function main(argv = process.argv.slice(2), env = process.env) {
   const child = spawn(electron, ["."], {
     cwd: path.resolve(__dirname, ".."),
     stdio: "inherit",
-    shell: process.platform === "win32",
     env: {
       ...env,
       NYILASZARO_APP_MODE: options.mode,

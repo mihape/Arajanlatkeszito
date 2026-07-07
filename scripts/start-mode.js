@@ -9,7 +9,6 @@ if (mode !== "demo" && mode !== "release") {
 
 const child = spawn(electron, ["."], {
   stdio: "inherit",
-  shell: process.platform === "win32",
   env: {
     ...process.env,
     NYILASZARO_APP_MODE: mode
