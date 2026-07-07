@@ -84,6 +84,9 @@ document.addEventListener("click", handleClick);
 document.addEventListener("input", handleInput);
 document.addEventListener("change", handleChange);
 window.addEventListener("afterprint", clearPrintMode);
+window.nyilaszaroSmoke = {
+  preparePrint: prepareSmokePrint
+};
 
 function uid(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}-${Date.now().toString(36)}`;
@@ -2684,6 +2687,21 @@ function waitForPrintRender() {
     const raf = window.requestAnimationFrame || ((callback) => window.setTimeout(callback, 0));
     raf(() => raf(resolve));
   });
+}
+
+async function prepareSmokePrint(mode = "customer") {
+  ui.printMode = mode === "internal" ? "internal" : "customer";
+  render();
+  document.body.classList.toggle("print-internal", ui.printMode === "internal");
+  document.body.classList.toggle("print-customer", ui.printMode !== "internal");
+  await waitForPrintRender();
+  const text = document.body ? document.body.innerText : "";
+  return {
+    mode: ui.printMode,
+    hasPrintSheet: Boolean(document.querySelector(".print-sheet")),
+    hasQuoteNumber: text.includes("AJ-2026-0001"),
+    hasGrossTotal: text.includes("Fizetendő bruttó")
+  };
 }
 
 async function saveItem() {

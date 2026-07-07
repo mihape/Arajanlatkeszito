@@ -138,19 +138,7 @@ async function runPdfSmoke(window) {
 
   for (const mode of modes) {
     const normalizedMode = mode === "internal" ? "internal" : "customer";
-    const prepared = await window.webContents.executeJavaScript(`(async () => {
-      ui.printMode = ${JSON.stringify(normalizedMode)};
-      render();
-      document.body.classList.toggle("print-internal", ui.printMode === "internal");
-      document.body.classList.toggle("print-customer", ui.printMode !== "internal");
-      await waitForPrintRender();
-      const text = document.body ? document.body.innerText : "";
-      return {
-        hasPrintSheet: Boolean(document.querySelector(".print-sheet")),
-        hasQuoteNumber: text.includes("AJ-2026-0001"),
-        hasGrossTotal: text.includes("Fizetendő bruttó")
-      };
-    })()`);
+    const prepared = await window.webContents.executeJavaScript(`window.nyilaszaroSmoke.preparePrint(${JSON.stringify(normalizedMode)})`);
     const buffer = await window.webContents.printToPDF({
       printBackground: true,
       pageSize: "A4",
@@ -178,8 +166,7 @@ async function runPdfSmoke(window) {
 
   await window.webContents.executeJavaScript(`(() => {
     document.body.classList.remove("print-internal", "print-customer");
-    ui.printMode = "customer";
-    render();
+    window.nyilaszaroSmoke.preparePrint("customer");
   })()`);
 
   return {
