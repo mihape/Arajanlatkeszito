@@ -506,6 +506,31 @@ Packaged release smoke JSON summary:
 - SQLite `engine: node:sqlite`
 - SQLite `ready: true`
 
+Silent installer verified run:
+
+- run: `28862940676`
+- URL: `https://github.com/mihape/Arajanlatkeszito/actions/runs/28862940676`
+- commit: `c2954da6af2113c35e77e9a7a4ce47cdf59ce8f9`
+- result: success
+- artifact: `nyilaszaro-windows-build`, artifact ID `8136456184`
+- artifact URL: `https://github.com/mihape/Arajanlatkeszito/actions/runs/28862940676/artifacts/8136456184`
+
+Silent installer smoke evidence:
+
+- installer: `dist/Nyilaszaro Ajanlatkeszito Setup 0.1.0.exe`
+- installer mode: silent
+- install target: temporary Windows runner folder
+- installed app: `Nyilaszaro Ajanlatkeszito.exe`
+- installed app launched successfully from the temporary install folder
+- `ok: true`
+- `mode: release`
+- dashboard rendered
+- empty quote state rendered
+- no `Demo Partner Kft.`
+- no `AJ-2026-0001`
+- SQLite `engine: node:sqlite`
+- SQLite `ready: true`
+
 ## 2026-07-03 GitHub Actions final artifact validation
 
 Run:
