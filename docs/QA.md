@@ -416,6 +416,37 @@ Demo-mode expectations:
 
 This closes part of the Electron startup risk in CI. The installed NSIS app still needs manual Windows validation for shortcut launch, PDF visual output and backup restore.
 
+Verified run:
+
+- run: `28861756774`
+- URL: `https://github.com/mihape/Arajanlatkeszito/actions/runs/28861756774`
+- commit: `f372186f1a7217a2b2295ee2b35b91d6a3f4c89d`
+- result: success
+- artifact: `nyilaszaro-windows-build`, artifact ID `8135984785`
+- uploaded files: installer `.exe` and `CHECKSUMS.txt`
+- artifact URL: `https://github.com/mihape/Arajanlatkeszito/actions/runs/28861756774/artifacts/8135984785`
+
+Release smoke JSON summary:
+
+- `ok: true`
+- `mode: release`
+- dashboard rendered
+- empty quote state rendered
+- no `Demo Partner Kft.`
+- no `AJ-2026-0001`
+- SQLite `engine: node:sqlite`
+- SQLite `ready: true`
+
+Demo smoke JSON summary:
+
+- `ok: true`
+- `mode: demo`
+- dashboard rendered
+- `Demo Partner Kft.` rendered
+- `AJ-2026-0001` rendered
+- SQLite `engine: node:sqlite`
+- SQLite `ready: true`
+
 ## 2026-07-03 GitHub Actions final artifact validation
 
 Run:
