@@ -227,9 +227,12 @@ Scope:
 
 Commands/evidence:
 
-- `git ls-files`: 41 tracked files, all source/docs/config/test files.
+- `git ls-files`: 44 tracked files, all source/docs/config/test files.
 - Tracked artifact search found no `.db`, `.sqlite`, `.pdf`, `.xlsx`, `.xls`, `.csv`, `.tsv`, archive, backup JSON or handoff files.
 - `git log --all --name-only` search found no historical handoff, database, backup, PDF, spreadsheet or archive file names.
+- Targeted filename checks returned no matches:
+  - `git ls-files | rg -n '\.(db|sqlite|sqlite3|pdf|xlsx|xls|csv|tsv|zip|7z|rar|bak)$|backup|mentes|handoff|HANDOFF|ARAJANLAT_KESZITO_HANDOFF'`
+  - `git log --all --name-only --pretty=format: | sort -u | rg -n '\.(db|sqlite|sqlite3|pdf|xlsx|xls|csv|tsv|zip|7z|rar|bak)$|backup|mentes|handoff|HANDOFF|ARAJANLAT_KESZITO_HANDOFF'`
 - `.gitignore` covers `dist/`, `.tmp-tests/`, local SQLite/database files, backup JSON files, logs and handoff notes.
 - Demo-data search found only fictional data and documentation/test references:
   - `Demo Partner Kft.`
@@ -242,6 +245,14 @@ Local ignored artifacts:
 
 - `.tmp-tests/` contains generated SQLite files from adapter tests.
 - These files are ignored and not part of the public repository.
+
+Latest recheck:
+
+- date: 2026-07-07
+- commit: `c9b949a`
+- `npm run check` passed locally.
+- Latest code-bearing Windows workflow passed on commit `f372186f1a7217a2b2295ee2b35b91d6a3f4c89d`: `https://github.com/mihape/Arajanlatkeszito/actions/runs/28861756774`
+- That workflow `npm ci` reported 0 vulnerabilities.
 
 Result:
 
