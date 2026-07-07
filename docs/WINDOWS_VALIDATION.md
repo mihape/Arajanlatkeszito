@@ -11,6 +11,18 @@ Use this checklist for issue #15 after a successful `Build Windows` workflow run
    - `CHECKSUMS.txt`
 4. Optional: compare the installer SHA256 value against `CHECKSUMS.txt`.
 
+Automated helper after download:
+
+```powershell
+npm run validate:windows -- --installer "C:\Path\To\Nyilaszaro Ajanlatkeszito Setup 0.1.0.exe" --checksums "C:\Path\To\CHECKSUMS.txt"
+```
+
+This prints a validation report with platform, installer checksum, installed app path candidates and SQLite location. Add `-- --launch` to launch the installed app if it is found:
+
+```powershell
+npm run validate:windows -- --installer "C:\Path\To\Nyilaszaro Ajanlatkeszito Setup 0.1.0.exe" --checksums "C:\Path\To\CHECKSUMS.txt" --launch
+```
+
 ## Install and launch
 
 1. Run the installer on Windows.
@@ -103,6 +115,12 @@ Internal PDF:
    - customer and quote return
    - app restart after import keeps the restored data
 
+## Helper report
+
+The helper does not replace visual/manual checks. It verifies file-level evidence and can launch the installed app, then the person validating must still confirm the UI, PDF and backup behavior.
+
+Copy the helper output into #15 together with the manual observations below.
+
 ## Result note template
 
 Paste this into issue #15 or #2 after validation:
@@ -112,6 +130,7 @@ Windows manual validation result:
 
 - Workflow run:
 - Installer artifact:
+- validate:windows output:
 - Windows version:
 - Installed app launched: yes/no
 - Release mode empty startup: yes/no

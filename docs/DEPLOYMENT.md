@@ -108,3 +108,9 @@ The demo installer is a later milestone. The current workflow prepares the norma
 ## Manual Windows Validation
 
 Use [Windows validation checklist](WINDOWS_VALIDATION.md) after a successful GitHub Actions `Build Windows` run. The checklist covers installer download, release/demo startup, SQLite file creation, PDF export and backup restore.
+
+The repository also includes a helper command for Windows:
+
+```bash
+npm run validate:windows -- --installer "C:\Path\To\Nyilaszaro Ajanlatkeszito Setup 0.1.0.exe" --checksums "C:\Path\To\CHECKSUMS.txt"
+```

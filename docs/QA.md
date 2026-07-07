@@ -248,6 +248,24 @@ Result:
 - Current repository content is public-repo safe based on tracked files and Git history file-name checks.
 - Final #1 release gate should remain open until the actual first tagged release is prepared and reviewed one more time.
 
+## 2026-07-07 Windows validation helper
+
+Implemented:
+
+- `npm run validate:windows`
+- `scripts/windows-validate.js`
+- `tests/windows-validation.test.js`
+
+Purpose:
+
+- verify downloaded installer presence
+- compare installer SHA256 with `CHECKSUMS.txt`
+- report likely installed app path
+- report expected SQLite path under `%APPDATA%`
+- optionally launch the installed app with `--launch`
+
+The helper still requires a human to observe the app window and complete PDF/backup checks.
+
 ## 2026-07-06 Dashboard workflow check
 
 Implemented:
