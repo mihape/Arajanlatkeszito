@@ -164,6 +164,40 @@ Purpose:
 - provide a copyable issue result template for #15/#2
 - keep manual installer validation separate from GitHub Actions build validation
 
+## 2026-07-07 Windows artifact validation
+
+Run:
+
+- GitHub Actions `Build Windows` run `28843882287`
+- Artifact: `nyilaszaro-windows-build`
+
+Result:
+
+- workflow passed on commit `60f895fa45a0f8c09b4b7f0898c9f92f97768951`
+- artifact downloaded successfully
+- artifact contains `Nyilaszaro Ajanlatkeszito Setup 0.1.0.exe`
+- artifact contains `CHECKSUMS.txt`
+- installer file type: `PE32 executable (GUI) Intel 80386, for MS Windows, Nullsoft Installer self-extracting archive`
+- installer SHA256 matched `CHECKSUMS.txt`
+
+Observed SHA256:
+
+```text
+645335618a22aa1a1576855e263d55c62a88ae4345d6325b193f82fae9a0e02e
+```
+
+Not completed from this WSL session:
+
+- manual GUI installer launch
+- installed app startup
+- installed app PDF save/open flow
+
+Reason:
+
+```text
+WSL (2 - ) ERROR: UtilBindVsockAnyPort:307: socket failed 1
+```
+
 ## 2026-07-06 Dashboard workflow check
 
 Implemented:
