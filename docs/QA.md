@@ -580,3 +580,42 @@ Conclusion:
 
 - Windows CI installer build and artifact upload are validated on GitHub Actions.
 - The release upload path still needs one tagged `v*` release validation.
+
+## 2026-07-08 Installed app PDF smoke validation
+
+Run:
+
+- GitHub Actions `Build Windows` run `28919480974`
+- URL: `https://github.com/mihape/Arajanlatkeszito/actions/runs/28919480974`
+- Commit: `7793b367fdd0df082e2e6906a26db53c8042a7fc`
+- Artifact: `nyilaszaro-windows-build`, artifact ID `8158904452`
+
+Result:
+
+- workflow passed on Windows Server 2025
+- `npm ci` reported 0 vulnerabilities
+- `npm run check` passed on Windows
+- Electron release smoke passed with an empty dashboard, no demo customer and SQLite ready
+- Electron demo smoke passed with fictional demo data
+- packaged unpacked app smoke passed
+- silent NSIS installer smoke passed in release mode
+- installed app PDF smoke passed in demo mode
+
+Installed app PDF evidence:
+
+- installer: `dist\Nyilaszaro Ajanlatkeszito Setup 0.1.0.exe`
+- installed app launched from the temporary install folder
+- SQLite engine: `node:sqlite`
+- SQLite ready: true
+- customer PDF: `.tmp-tests\installer-pdf-smoke\smoke-customer.pdf`, 45901 bytes
+- internal PDF: `.tmp-tests\installer-pdf-smoke\smoke-internal.pdf`, 46891 bytes
+- both PDF modes rendered a print sheet
+- both PDF modes included demo quote number `AJ-2026-0001`
+- both PDF modes included the gross total text
+- PDF smoke returned no errors
+
+Still not completed from this automated CI pass:
+
+- visible installer wizard/shortcut or Start menu launch on a real Windows desktop
+- human visual review of the customer/internal PDF layout
+- backup export/import check after app restart on a real Windows desktop
