@@ -656,3 +656,47 @@ Still not completed from this automated CI pass:
 
 - visible installer wizard/shortcut or Start menu launch on a real Windows desktop
 - human visual review of the customer/internal PDF layout
+
+## 2026-07-08 Public repo safety recheck after smoke gates
+
+Scope:
+
+- current tracked files at `d5b028953b38c2508fa0cc84cde079b5c4e14162`
+- Git history file names
+- ignored/generated local artifact patterns
+- demo/smoke data strings
+- tag state
+
+Evidence:
+
+- worktree was clean before the check
+- tracked files are source, docs, config, tests and package files only
+- tracked filename search found no database, SQLite file, PDF, spreadsheet, CSV/TSV, archive, backup JSON or handoff file
+- Git history filename search found no database, SQLite file, PDF, spreadsheet, CSV/TSV, archive, backup JSON or handoff file
+- `.gitignore` covers `dist/`, `.tmp-tests/`, local SQLite/database files, backup JSON files, logs and handoff notes
+- demo/smoke content search found only fictional values:
+  - `Demo Partner Kft.`
+  - `Példa utca`
+  - `example.invalid`
+  - dummy `+36 30 000 0000/0001` phone values
+  - `Smoke Teszt Kft.`
+  - `Smoke Importalt Kft.`
+- no Git tags exist yet
+
+Validation:
+
+```bash
+npm run check
+npm audit --audit-level=moderate
+```
+
+Results:
+
+- `npm run check` passed locally
+- `npm audit --audit-level=moderate` passed with 0 vulnerabilities
+- latest Build Windows workflow passed on commit `ec9555ea84ce4ad880c8f126b211e76a353db197`: `https://github.com/mihape/Arajanlatkeszito/actions/runs/28923097495`
+
+Conclusion:
+
+- Current repository content remains public-repo safe based on tracked files, Git history filename checks and targeted fictional-data search.
+- Final #1 release gate should still remain open until the actual first tagged release is prepared and reviewed against the exact release commit.
