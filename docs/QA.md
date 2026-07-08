@@ -618,4 +618,41 @@ Still not completed from this automated CI pass:
 
 - visible installer wizard/shortcut or Start menu launch on a real Windows desktop
 - human visual review of the customer/internal PDF layout
-- backup export/import check after app restart on a real Windows desktop
+
+## 2026-07-08 Installed app backup restart smoke validation
+
+Run:
+
+- GitHub Actions `Build Windows` run `28923097495`
+- URL: `https://github.com/mihape/Arajanlatkeszito/actions/runs/28923097495`
+- Commit: `ec9555ea84ce4ad880c8f126b211e76a353db197`
+- Artifact: `nyilaszaro-windows-build`, artifact ID `8160274788`
+
+Result:
+
+- workflow passed on Windows Server 2025
+- `npm ci` reported 0 vulnerabilities
+- `npm run check` passed on Windows
+- Electron release/demo smoke passed
+- Windows installer build passed
+- packaged release app smoke passed
+- silent installer release smoke passed
+- installed app PDF smoke passed
+- installed app backup restart smoke passed
+
+Backup restart evidence:
+
+- command: `npm run smoke:installer:backup`
+- installer: `dist\Nyilaszaro Ajanlatkeszito Setup 0.1.0.exe`
+- installed app launched from a temporary install folder
+- both backup launches used the same temporary user data folder
+- write launch saved, exported and imported fictional backup data
+- write launch result: `ok: true`, `loadedCustomerCount: 2`, `loadedQuoteCount: 2`
+- verify launch result after restart: `ok: true`, `loadedCustomerCount: 2`, `loadedQuoteCount: 2`, `exportedCustomerCount: 2`
+- SQLite after restart reported `settings: 1`, `customers: 2`, `quotes: 2`
+- backup smoke returned no errors
+
+Still not completed from this automated CI pass:
+
+- visible installer wizard/shortcut or Start menu launch on a real Windows desktop
+- human visual review of the customer/internal PDF layout
