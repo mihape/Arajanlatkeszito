@@ -95,14 +95,17 @@ function attachSmokeCheck(window, appMode) {
           hasDemoQuote: text.includes("AJ-2026-0001"),
           quoteCountZero: text.includes("0 db"),
           quoteCountOne: text.includes("1 db")
-        };
+      };
       })()`);
       const database = dataAdapter.getStatus();
-      const errors = validateSmokeResult(expectedMode, dom, database);
+      const errors = validateSmokeResult(expectedMode, dom, database, {
+        skipDataModeCheck: process.env.NYILASZARO_SMOKE_SKIP_DATA_MODE_CHECK === "1"
+      });
       const pdf = await runPdfSmoke(window);
+      const backup = await runBackupSmoke(window);
       clearTimeout(timeout);
       finishSmoke({
-        ok: errors.length === 0 && (!pdf || pdf.ok),
+        ok: errors.length === 0 && (!pdf || pdf.ok) && (!backup || backup.ok),
         mode: expectedMode,
         dom,
         database: {
@@ -112,6 +115,7 @@ function attachSmokeCheck(window, appMode) {
           counts: database.counts || {}
         },
         pdf,
+        backup,
         errors
       });
     } catch (error) {
@@ -177,11 +181,119 @@ async function runPdfSmoke(window) {
   };
 }
 
-function validateSmokeResult(expectedMode, dom, database) {
+async function runBackupSmoke(window) {
+  const backupMode = process.env.NYILASZARO_SMOKE_BACKUP_MODE;
+  if (!backupMode) return null;
+
+  return window.webContents.executeJavaScript(`(async () => {
+    const data = window.nyilaszaroApp?.data;
+    if (!data?.saveState || !data?.exportState || !data?.importState || !data?.loadState) {
+      return { ok: false, mode: ${JSON.stringify(backupMode)}, errors: ["Data API is not available."] };
+    }
+
+    const backupDate = "2026-07-08";
+    const baseState = {
+      settings: { companyName: "Smoke Teszt Ceg" },
+      customers: [{ id: "smoke-customer", name: "Smoke Teszt Kft.", email: "smoke@example.invalid" }],
+      catalog: {
+        profiles: [],
+        exteriorOpenings: [],
+        matrices: {},
+        colors: [],
+        glasses: [],
+        extensions: [],
+        accessories: [],
+        interiorDoors: { manufacturers: [], models: [], colors: [], frames: [], handles: [], locks: [] }
+      },
+      openingImages: {},
+      quotes: [{
+        id: "smoke-quote",
+        number: "SMOKE-BACKUP-001",
+        customerId: "smoke-customer",
+        status: "Vazlat",
+        createdAt: backupDate,
+        updatedAt: backupDate,
+        version: 1,
+        statusHistory: [{ status: "Vazlat", at: backupDate, note: "Backup smoke" }],
+        margin: 0,
+        vat: 27,
+        items: []
+      }]
+    };
+
+    function hasImportedBackup(state) {
+      const customers = state?.customers || [];
+      const quotes = state?.quotes || [];
+      return customers.some((customer) => customer.id === "smoke-imported-customer")
+        && quotes.some((quote) => quote.id === "smoke-imported-quote");
+    }
+
+    if (${JSON.stringify(backupMode)} === "write") {
+      const save = await data.saveState(baseState);
+      const exported = await data.exportState();
+      const importedState = {
+        ...baseState,
+        settings: { ...baseState.settings, companyName: "Smoke Importalt Ceg" },
+        customers: [
+          ...baseState.customers,
+          { id: "smoke-imported-customer", name: "Smoke Importalt Kft.", email: "smoke-import@example.invalid" }
+        ],
+        quotes: [
+          ...baseState.quotes,
+          {
+            id: "smoke-imported-quote",
+            number: "SMOKE-BACKUP-002",
+            customerId: "smoke-imported-customer",
+            status: "Elfogadva",
+            createdAt: backupDate,
+            updatedAt: backupDate,
+            version: 1,
+            statusHistory: [{ status: "Elfogadva", at: backupDate, note: "Imported backup smoke" }],
+            margin: 0,
+            vat: 27,
+            items: []
+          }
+        ]
+      };
+      const imported = await data.importState(importedState);
+      const loaded = await data.loadState();
+      const errors = [];
+      if (!save?.ok) errors.push("Initial backup smoke save failed.");
+      if (!exported?.state?.customers?.some((customer) => customer.id === "smoke-customer")) errors.push("Export did not include the saved smoke customer.");
+      if (!imported?.ok) errors.push("Backup smoke import failed.");
+      if (!hasImportedBackup(loaded?.state)) errors.push("Imported backup state was not loaded after import.");
+      return {
+        ok: errors.length === 0,
+        mode: "write",
+        exportedCustomerCount: exported?.state?.customers?.length || 0,
+        loadedCustomerCount: loaded?.state?.customers?.length || 0,
+        loadedQuoteCount: loaded?.state?.quotes?.length || 0,
+        errors
+      };
+    }
+
+    const loaded = await data.loadState();
+    const exported = await data.exportState();
+    const errors = [];
+    if (!hasImportedBackup(loaded?.state)) errors.push("Imported backup state did not survive restart.");
+    if (!hasImportedBackup(exported?.state)) errors.push("Exported backup state after restart is missing imported rows.");
+    return {
+      ok: errors.length === 0,
+      mode: "verify",
+      loadedCustomerCount: loaded?.state?.customers?.length || 0,
+      loadedQuoteCount: loaded?.state?.quotes?.length || 0,
+      exportedCustomerCount: exported?.state?.customers?.length || 0,
+      errors
+    };
+  })()`);
+}
+
+function validateSmokeResult(expectedMode, dom, database, options = {}) {
   const errors = [];
   if (!dom.hasDashboard) errors.push("Dashboard heading was not rendered.");
   if (!database.ready) errors.push("SQLite adapter is not ready.");
   if (!database.path) errors.push("SQLite database path is missing.");
+  if (options.skipDataModeCheck) return errors;
 
   if (expectedMode === "release") {
     if (!dom.hasEmptyQuoteState) errors.push("Release mode did not render the empty quote state.");

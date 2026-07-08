@@ -31,7 +31,9 @@ function main(argv = process.argv.slice(2), env = process.env) {
       NYILASZARO_SMOKE_TIMEOUT_MS: String(options.timeoutMs),
       NYILASZARO_USER_DATA_DIR: userDataDir,
       NYILASZARO_SMOKE_PDF_DIR: options.pdfDir,
-      NYILASZARO_SMOKE_PDF_MODES: options.pdfModes
+      NYILASZARO_SMOKE_PDF_MODES: options.pdfModes,
+      NYILASZARO_SMOKE_BACKUP_MODE: options.backupMode,
+      NYILASZARO_SMOKE_SKIP_DATA_MODE_CHECK: options.skipDataModeCheck ? "1" : ""
     }
   });
 
@@ -66,6 +68,8 @@ function parseArgs(argv) {
     app: "",
     pdfDir: "",
     pdfModes: "customer,internal",
+    backupMode: "",
+    skipDataModeCheck: false,
     help: false
   };
 
@@ -77,11 +81,17 @@ function parseArgs(argv) {
     else if (arg === "--app") options.app = argv[++index] || "";
     else if (arg === "--pdf-dir") options.pdfDir = path.resolve(root, argv[++index] || "");
     else if (arg === "--pdf-modes") options.pdfModes = argv[++index] || options.pdfModes;
+    else if (arg === "--backup-mode") options.backupMode = normalizeBackupMode(argv[++index] || "");
+    else if (arg === "--skip-data-mode-check") options.skipDataModeCheck = true;
     else if (arg === "--help") options.help = true;
   }
 
   if (!Number.isFinite(options.timeoutMs) || options.timeoutMs < 1000) options.timeoutMs = 20000;
   return options;
+}
+
+function normalizeBackupMode(value) {
+  return value === "write" || value === "verify" ? value : "";
 }
 
 function resolveLaunchTarget(options) {
@@ -111,7 +121,7 @@ function resolveLaunchTarget(options) {
 }
 
 function printUsage() {
-  console.log("Usage: node scripts/electron-smoke.js <release|demo> [--app <exe-path>] [--pdf-dir <path>] [--pdf-modes customer,internal] [--timeout-ms 20000] [--user-data-dir <path>]");
+  console.log("Usage: node scripts/electron-smoke.js <release|demo> [--app <exe-path>] [--pdf-dir <path>] [--pdf-modes customer,internal] [--backup-mode write|verify] [--skip-data-mode-check] [--timeout-ms 20000] [--user-data-dir <path>]");
 }
 
 if (require.main === module) {
@@ -120,6 +130,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  normalizeBackupMode,
   parseArgs,
   resolveLaunchTarget
 };

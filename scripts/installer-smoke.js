@@ -41,23 +41,50 @@ async function main(argv = process.argv.slice(2)) {
     return 1;
   }
 
-  const smokeCode = await runCommand(process.execPath, [
-    path.join(root, "scripts/electron-smoke.js"),
-    options.mode,
-    "--app",
+  const smokeCode = await runElectronSmoke({
+    mode: options.mode,
     installedApp,
-    "--user-data-dir",
     userDataDir,
-    "--timeout-ms",
-    String(options.smokeTimeoutMs),
-    ...(pdfDir ? ["--pdf-dir", pdfDir, "--pdf-modes", options.pdfModes] : [])
-  ], options.smokeTimeoutMs + 5000);
+    timeoutMs: options.smokeTimeoutMs,
+    pdfDir,
+    pdfModes: options.pdfModes,
+    backupMode: options.backupRestart ? "write" : ""
+  });
 
   if (smokeCode !== 0) return smokeCode || 1;
 
+  if (options.backupRestart) {
+    const restartSmokeCode = await runElectronSmoke({
+      mode: options.mode,
+      installedApp,
+      userDataDir,
+      timeoutMs: options.smokeTimeoutMs,
+      backupMode: "verify",
+      skipDataModeCheck: true
+    });
+    if (restartSmokeCode !== 0) return restartSmokeCode || 1;
+  }
+
   console.log(`# Installer smoke result\n`);
   console.log(`- Installed app launched successfully from: ${installedApp}`);
+  if (options.backupRestart) console.log(`- Backup import survived restart using user data dir: ${userDataDir}`);
   return 0;
+}
+
+function runElectronSmoke(options) {
+  return runCommand(process.execPath, [
+    path.join(root, "scripts/electron-smoke.js"),
+    options.mode,
+    "--app",
+    options.installedApp,
+    "--user-data-dir",
+    options.userDataDir,
+    "--timeout-ms",
+    String(options.timeoutMs),
+    ...(options.pdfDir ? ["--pdf-dir", options.pdfDir, "--pdf-modes", options.pdfModes] : []),
+    ...(options.backupMode ? ["--backup-mode", options.backupMode] : []),
+    ...(options.skipDataModeCheck ? ["--skip-data-mode-check"] : [])
+  ], options.timeoutMs + 5000);
 }
 
 function parseArgs(argv) {
@@ -69,6 +96,7 @@ function parseArgs(argv) {
     userDataDir: "",
     pdfDir: "",
     pdfModes: "customer,internal",
+    backupRestart: false,
     installTimeoutMs: 120000,
     waitTimeoutMs: 30000,
     smokeTimeoutMs: 20000,
@@ -84,6 +112,7 @@ function parseArgs(argv) {
     else if (arg === "--user-data-dir") options.userDataDir = path.resolve(root, argv[++index] || "");
     else if (arg === "--pdf-dir") options.pdfDir = path.resolve(root, argv[++index] || "");
     else if (arg === "--pdf-modes") options.pdfModes = argv[++index] || options.pdfModes;
+    else if (arg === "--backup-restart") options.backupRestart = true;
     else if (arg === "--install-timeout-ms") options.installTimeoutMs = coerceTimeout(argv[++index], options.installTimeoutMs);
     else if (arg === "--wait-timeout-ms") options.waitTimeoutMs = coerceTimeout(argv[++index], options.waitTimeoutMs);
     else if (arg === "--smoke-timeout-ms") options.smokeTimeoutMs = coerceTimeout(argv[++index], options.smokeTimeoutMs);
@@ -161,7 +190,7 @@ function delay(ms) {
 }
 
 function printUsage() {
-  console.log("Usage: node scripts/installer-smoke.js [--mode release|demo] [--installer <setup.exe>] [--install-dir <path>] [--user-data-dir <path>] [--pdf-dir <path>]");
+  console.log("Usage: node scripts/installer-smoke.js [--mode release|demo] [--installer <setup.exe>] [--install-dir <path>] [--user-data-dir <path>] [--pdf-dir <path>] [--backup-restart]");
 }
 
 if (require.main === module) {

@@ -94,11 +94,12 @@ A `Build Windows` workflow sorrendje:
 - `npm run smoke:packaged:release`
 - `npm run smoke:installer:release`
 - `npm run smoke:installer:pdf`
+- `npm run smoke:installer:backup`
 - `CHECKSUMS.txt` generalas
 - artifact feltoltes
 - tag eseten release asset feltoltes
 
-Az Electron smoke a fejlesztoi Electron inditast, release/demo adatmodot es SQLite adapter indulast bizonyitja Windows runneren. A packaged smoke a `dist/win-unpacked` csomagolt exe release indulasat bizonyitja. Az installer smoke az NSIS setup csendes telepiteset es az installalt exe release indulasat bizonyitja. A PDF smoke az installalt app Electron `printToPDF` ugyfel/belso fajlgeneralasat bizonyitja. A shortcutos inditas, PDF vizualis ellenorzes es backup visszatoltes tovabbra is kulon release kapu.
+Az Electron smoke a fejlesztoi Electron inditast, release/demo adatmodot es SQLite adapter indulast bizonyitja Windows runneren. A packaged smoke a `dist/win-unpacked` csomagolt exe release indulasat bizonyitja. Az installer smoke az NSIS setup csendes telepiteset es az installalt exe release indulasat bizonyitja. A PDF smoke az installalt app Electron `printToPDF` ugyfel/belso fajlgeneralasat bizonyitja. A backup smoke az installalt app SQLite adatmentes/import utvonalat ellenorzi, majd ugyanazzal a user data konyvtarral ujrainditva igazolja, hogy az importalt adat megmaradt. A shortcutos inditas es PDF vizualis ellenorzes tovabbra is kulon release kapu.
 
 ## Elso publikus push elotti lista
 

@@ -43,6 +43,9 @@ jobs:
       - name: Smoke test installed app PDF export
         run: npm run smoke:installer:pdf
 
+      - name: Smoke test installed app backup restart
+        run: npm run smoke:installer:backup
+
       - name: Generate checksums
         shell: pwsh
         run: |

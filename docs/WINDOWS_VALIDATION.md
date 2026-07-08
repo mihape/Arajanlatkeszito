@@ -107,6 +107,12 @@ It also runs a demo-mode installed-app PDF export smoke:
 npm run smoke:installer:pdf
 ```
 
+It also runs an installed-app backup restart smoke:
+
+```powershell
+npm run smoke:installer:backup
+```
+
 The smoke run uses a temporary user data directory and prints a single JSON line prefixed with:
 
 ```text
@@ -125,8 +131,9 @@ Expected CI evidence:
 - NSIS installer runs in silent mode into a temporary folder
 - installed `Nyilaszaro Ajanlatkeszito.exe` starts in release mode and passes the same no-demo-data checks
 - installed app starts in demo mode and writes customer/internal PDF files through Electron `printToPDF`
+- installed app saves, exports and imports a fictional backup state, then a second launch verifies the imported customer/quote survived restart in SQLite
 
-This automated smoke is a startup, data-mode and PDF file-generation check for development Electron, the unpacked packaged app and a silent-installed app. It does not replace the manual installed-app checks below, because it does not click through the installed shortcut, visually inspect PDF layout, or validate backup restore after a real installer run.
+This automated smoke is a startup, data-mode, PDF file-generation and backup persistence check for development Electron, the unpacked packaged app and a silent-installed app. It does not replace the manual installed-app checks below, because it does not click through the installed shortcut, launch from Start menu, or visually inspect PDF layout.
 
 ## PDF checks
 

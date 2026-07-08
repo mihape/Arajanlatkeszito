@@ -36,6 +36,7 @@ test("Installer smoke parser accepts explicit paths and timeouts", () => {
     ".tmp-tests/pdf",
     "--pdf-modes",
     "internal",
+    "--backup-restart",
     "--install-timeout-ms",
     "90000",
     "--wait-timeout-ms",
@@ -50,6 +51,7 @@ test("Installer smoke parser accepts explicit paths and timeouts", () => {
   assert.equal(options.userDataDir, path.join(root, ".tmp-tests/user-data"));
   assert.equal(options.pdfDir, path.join(root, ".tmp-tests/pdf"));
   assert.equal(options.pdfModes, "internal");
+  assert.equal(options.backupRestart, true);
   assert.equal(options.installTimeoutMs, 90000);
   assert.equal(options.waitTimeoutMs, 10000);
   assert.equal(options.smokeTimeoutMs, 15000);

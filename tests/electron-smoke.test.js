@@ -1,6 +1,6 @@
 const assert = require("assert");
 const path = require("path");
-const { parseArgs, resolveLaunchTarget } = require("../scripts/electron-smoke");
+const { normalizeBackupMode, parseArgs, resolveLaunchTarget } = require("../scripts/electron-smoke");
 
 const root = path.resolve(__dirname, "..");
 
@@ -29,12 +29,17 @@ test("Electron smoke parser accepts packaged app path", () => {
     "--pdf-dir",
     ".tmp-tests/pdf",
     "--pdf-modes",
-    "customer"
+    "customer",
+    "--backup-mode",
+    "write",
+    "--skip-data-mode-check"
   ]);
   assert.equal(options.mode, "release");
   assert.equal(options.app, "dist\\win-unpacked\\Nyilaszaro Ajanlatkeszito.exe");
   assert.equal(options.pdfDir, path.join(root, ".tmp-tests/pdf"));
   assert.equal(options.pdfModes, "customer");
+  assert.equal(options.backupMode, "write");
+  assert.equal(options.skipDataModeCheck, true);
 });
 
 test("Electron smoke parser accepts demo mode", () => {
@@ -52,4 +57,10 @@ test("Electron smoke launch target rejects missing packaged app", () => {
   const target = resolveLaunchTarget({ app: "dist/missing.exe" });
   assert.equal(target.ok, false);
   assert(target.error.includes("Packaged app was not found"));
+});
+
+test("Electron smoke backup mode accepts only write and verify", () => {
+  assert.equal(normalizeBackupMode("write"), "write");
+  assert.equal(normalizeBackupMode("verify"), "verify");
+  assert.equal(normalizeBackupMode("other"), "");
 });
