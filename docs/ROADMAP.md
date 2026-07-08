@@ -108,6 +108,26 @@ Elfogadasi feltetel:
 - Egy ajanlat teljes utja kovetheto a vazlattol elfogadasig.
 - A belso es ugyfelnek kuldott dokumentumok kulon valaszthatok.
 
+## 5.5 fazis - RC, UX es prezentacios alap
+
+Cel: az app legyen kiprobalhato Windows RC-kent, ures sajat adatbazissal induljon, es kapjon latvanyosabb, ugyfelprezentacios iranyba tovabbviheto feluletet.
+
+- RC telepitesi es tesztelesi dokumentacio.
+- Release modban ures adatbazisos elso inditas.
+- Baratsagos ures allapot es javasolt torzsadat-feltoltesi sorrend.
+- Dashboard vizualis es hasznalhatosagi csiszolas.
+- Ajanlatszerkeszto attekinthetoseg, aktiv tetel es osszesito erosites.
+- Prezentacios irany elokeszitese: ugyfel arak, szerkezeti rajz/kep helye, belso arak elrejtese ugyfelnezetben.
+- Legfeljebb 1-1 fiktiv pelda vagy kesobbi importalhato minta, valos gyartoi/ugyfel/adat nelkul.
+
+Elfogadasi feltetel:
+
+- Windows RC build letoltheto es telepitheto.
+- Elso inditasnal nincs demo ugyfel vagy demo ajanlat.
+- Az ures appbol ertheto, milyen sorrendben kell feltolteni a sajat adatokat.
+- Egy minimalis sajat vagy fiktiv peldaadatbol ajanlat es PDF keszitheto.
+- Az ugyfel PDF-ben nincs beszerzesi ar, haszon vagy fedezet.
+
 ## 6. fazis - CRM integracio
 
 Cel: kesobbi CRM-kapcsolat ugy, hogy az app helyben tovabbra is hasznalhato maradjon.

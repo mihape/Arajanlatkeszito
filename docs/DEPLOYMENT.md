@@ -111,10 +111,11 @@ Not allowed:
 Target release assets:
 
 - `Nyilaszaro-Ajanlatkeszito-Setup-<version>.exe`
-- `Nyilaszaro-Ajanlatkeszito-Demo-Setup-<version>.exe`
 - `CHECKSUMS.txt`
 
-The demo installer is a later milestone. The current workflow prepares the normal Windows build path first.
+The first RC/release direction is a clean installer that starts with an empty local database. If sample data is needed for testing or onboarding, keep it fictional and provide it as a separate documented import/example flow instead of preloading the production installer.
+
+Use [RC testing guide](TESTING-RC.md) for the empty first-run, setup flow and PDF validation scenario.
 
 ## Manual Windows Validation
 

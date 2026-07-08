@@ -1,8 +1,8 @@
 # Nyilaszaro Quote Builder
 
-Local-first Windows quote builder for window, door, shutter, mosquito screen, installation, and interior-door offers. The project is being prepared as a standalone Electron app with local storage first, SQLite next, PDF/export workflows, and later CRM-ready adapter boundaries.
+Local-first Windows quote builder for window, door, shutter, mosquito screen, installation, and interior-door offers. The project is being prepared as a standalone Electron app with a durable local SQLite store, PDF/export workflows, and later CRM-ready adapter boundaries.
 
-All bundled demo data is fictional and intended only for development, screenshots, and testing.
+Packaged release builds are intended to start with an empty local database so the owner can upload their own manufacturers, products, price matrices, colors, glazing, accessories, interior doors and installation items. Any bundled sample data must be fictional and limited to development, screenshots, smoke tests or an explicitly imported example.
 
 ## Current Status
 
@@ -19,6 +19,7 @@ This repository currently contains:
 - tested shared pricing calculations for matrix rounding, VAT, margin, accessories, and custom interior frames
 - initial Electron preload SQLite bridge with durable app-state storage and normalized table mirroring
 - documentation for architecture, roadmap, GitHub workflow, and CRM direction
+- RC testing guidance for empty release startup, first data setup and PDF checks
 
 ## Electron Development
 
@@ -71,6 +72,14 @@ npm run build:win
 
 Build output is written to `dist/`.
 
+## Release Candidate Testing
+
+Use the RC guide when validating a Windows build:
+
+- [RC testing guide](docs/TESTING-RC.md)
+
+The expected first-run release experience is an empty, usable app with clear setup direction, not a pre-filled demo system.
+
 ## Hungarian Summary
 
 Ez egy helyi Windows ajanlatkeszito app nyilaszarokhoz. A jelenlegi verzio mar Electron szerkezetben fut, es kesobb SQLite adatbazissal, stabil PDF exporttal, GitHub release folyamattal es CRM-integracios adapterekkel kell tovabbvinni.
@@ -81,6 +90,7 @@ Ez egy helyi Windows ajanlatkeszito app nyilaszarokhoz. A jelenlegi verzio mar E
 - [Architecture](docs/ARCHITECTURE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Deployment](docs/DEPLOYMENT.md)
+- [RC testing guide](docs/TESTING-RC.md)
 - [Windows validation checklist](docs/WINDOWS_VALIDATION.md)
 - [Security](docs/SECURITY.md)
 - [QA notes](docs/QA.md)
