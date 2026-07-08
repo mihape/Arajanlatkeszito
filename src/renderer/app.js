@@ -2695,10 +2695,11 @@ async function prepareSmokePrint(mode = "customer") {
   document.body.classList.toggle("print-internal", ui.printMode === "internal");
   document.body.classList.toggle("print-customer", ui.printMode !== "internal");
   await waitForPrintRender();
-  const text = document.body ? document.body.innerText : "";
+  const printSheet = document.querySelector(".print-sheet");
+  const text = printSheet?.textContent || document.body?.textContent || "";
   return {
     mode: ui.printMode,
-    hasPrintSheet: Boolean(document.querySelector(".print-sheet")),
+    hasPrintSheet: Boolean(printSheet),
     hasQuoteNumber: text.includes("AJ-2026-0001"),
     hasGrossTotal: text.includes("Fizetendő bruttó")
   };
