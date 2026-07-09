@@ -1810,8 +1810,22 @@ function renderCustomersView() {
 }
 
 function renderProfilesView() {
+  const profileSummary = plasticCatalogSummary();
   return `
     <div class="workspace-main">
+      <section class="catalog-overview">
+        <div class="catalog-overview-copy">
+          <span class="dashboard-mode">Műanyag törzsadatok</span>
+          <h2>Profilok, nyitástípusok és mátrix lefedettség</h2>
+          <p>Ellenőrizd a minta profilokat, majd profilonként és nyitástípusonként töltsd fel a saját ármátrixokat.</p>
+        </div>
+        <div class="catalog-overview-metrics">
+          ${catalogMetric("Profil", `${profileSummary.profileCount} db`, `${profileSummary.sampleProfileCount} minta/ellenőrizendő`)}
+          ${catalogMetric("Nyitástípus", `${profileSummary.openingCount} db`, "Ablak, erkélyajtó, bejárati ajtó")}
+          ${catalogMetric("Mátrix lefedettség", `${profileSummary.matrixCount}/${profileSummary.requiredMatrixCount}`, `${profileSummary.missingMatrixCount} hiányzó mátrix`)}
+        </div>
+      </section>
+
       <div class="manage-grid">
         <section class="panel">
           <div class="panel-header">
@@ -1852,6 +1866,10 @@ function renderProfilesView() {
                   <span class="tag teal">${esc(profile.category)}</span>
                 </div>
                 <div class="data-card-meta">UF ${esc(profile.uf || "-")} · UG 2rtg ${esc(profile.ug2 || "-")} · UG 3rtg ${esc(profile.ug3 || "-")}</div>
+                <div class="tag-row">
+                  ${profileMatrixCoverageTags(profile)}
+                  ${isSampleProfile(profile) ? `<span class="tag amber">Minta adat</span>` : ""}
+                </div>
                 <div class="actions" style="justify-content: flex-start;">
                   <button class="button" data-action="edit-profile" data-id="${profile.id}">${icon("edit")}Szerkesztés</button>
                   <button class="button danger" data-action="delete-profile" data-id="${profile.id}">${icon("trash")}Törlés</button>
@@ -1876,6 +1894,51 @@ function renderProfilesView() {
           ["note", "Megjegyzés"]
         ])}
       </section>
+    </div>
+  `;
+}
+
+function plasticCatalogSummary() {
+  const profiles = state.catalog.profiles || [];
+  const openings = state.catalog.exteriorOpenings || [];
+  const requiredMatrixCount = profiles.length * openings.length;
+  const matrixCount = profiles.reduce((sum, profile) => {
+    return sum + openings.filter((opening) => state.catalog.matrices?.[matrixKey(profile.id, opening.id)]).length;
+  }, 0);
+  return {
+    profileCount: profiles.length,
+    openingCount: openings.length,
+    requiredMatrixCount,
+    matrixCount,
+    missingMatrixCount: Math.max(0, requiredMatrixCount - matrixCount),
+    sampleProfileCount: profiles.filter(isSampleProfile).length
+  };
+}
+
+function isSampleProfile(profile) {
+  return ["profile-aluplast-ideal4000", "profile-gealan-s9000"].includes(profile?.id);
+}
+
+function profileMatrixCoverageTags(profile) {
+  const openings = state.catalog.exteriorOpenings || [];
+  const coverage = openings.filter((opening) => state.catalog.matrices?.[matrixKey(profile.id, opening.id)]).length;
+  const missing = Math.max(0, openings.length - coverage);
+  const matrixTag = missing
+    ? `<span class="tag amber">${coverage}/${openings.length} mátrix · ${missing} hiányzik</span>`
+    : `<span class="tag teal">${coverage}/${openings.length} mátrix kész</span>`;
+  const blocked = openings.reduce((sum, opening) => {
+    const matrix = state.catalog.matrices?.[matrixKey(profile.id, opening.id)];
+    return sum + Object.values(matrix?.blocked || {}).filter(Boolean).length;
+  }, 0);
+  return `${matrixTag}<span class="tag">${blocked} tiltott cella</span>`;
+}
+
+function catalogMetric(label, value, note) {
+  return `
+    <div class="catalog-metric">
+      <span>${esc(label)}</span>
+      <strong>${esc(value)}</strong>
+      <small>${esc(note)}</small>
     </div>
   `;
 }

@@ -1031,6 +1031,73 @@ tr.selectable.active td:first-child {
   color: var(--red);
 }
 
+.catalog-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, 0.8fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 18px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(15, 118, 110, 0.06), rgba(201, 131, 26, 0.04)),
+    #fff;
+  box-shadow: var(--shadow);
+}
+
+.catalog-overview-copy {
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.catalog-overview-copy h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.catalog-overview-copy p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.catalog-overview-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.catalog-metric {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-height: 96px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.catalog-metric span,
+.catalog-metric small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.catalog-metric strong {
+  overflow: hidden;
+  font-size: 21px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sort-note {
   display: grid;
   align-content: center;
@@ -1281,7 +1348,9 @@ tr.selectable.active td:first-child {
   .split,
   .manage-grid,
   .dashboard-metrics,
-  .setup-steps {
+  .setup-steps,
+  .catalog-overview,
+  .catalog-overview-metrics {
     grid-template-columns: 1fr;
   }
 

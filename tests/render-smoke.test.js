@@ -102,6 +102,16 @@ test("quotes dashboard renders workflow filters and version metadata", () => {
   assert(html.includes("Kezdő állapot"));
 });
 
+test("plastic catalog setup renders matrix coverage overview", () => {
+  const html = renderApp("?mode=release", "ui.view = 'profiles'; render();");
+
+  assert(html.includes("Műanyag törzsadatok"));
+  assert(html.includes("Mátrix lefedettség"));
+  assert(html.includes("minta/ellenőrizendő"));
+  assert(html.includes("Minta adat"));
+  assert(html.includes("tiltott cella"));
+});
+
 test("quote editor renders overview and active item cues", () => {
   const html = renderApp("?mode=demo", "ui.view = 'quote-editor'; ui.selectedItemId = state.quotes[0].items[0].id; ui.itemDraft = normalizeItem(state.quotes[0].items[0]); render();");
 
