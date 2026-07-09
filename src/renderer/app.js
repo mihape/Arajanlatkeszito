@@ -906,6 +906,8 @@ function renderQuotesView(quote) {
   return `
     <div class="quote-workspace">
       <div class="workspace-main">
+        ${renderQuoteEditorOverview(quote, customer, totals)}
+
         <section class="panel flat">
           <div class="panel-body">
             <div class="form-grid four">
@@ -988,6 +990,42 @@ function renderQuotesView(quote) {
         </section>
       </aside>
     </div>
+  `;
+}
+
+function renderQuoteEditorOverview(quote, customer, totals) {
+  const alerts = [];
+  if (!customer) alerts.push("Nincs ügyfél kiválasztva.");
+  if (!quote.projectAddress && !customer?.address) alerts.push("Hiányzik a projekt címe.");
+  if (!quote.items.length) alerts.push("Még nincs tétel az ajánlatban.");
+  return `
+    <section class="quote-overview">
+      <div class="quote-overview-card">
+        <span>Állapot</span>
+        <strong>${esc(quote.status || "Vázlat")}</strong>
+        <small>v${number(quote.version || 1)} · ${esc(quote.updatedAt || quote.createdAt || "-")}</small>
+      </div>
+      <div class="quote-overview-card">
+        <span>Ügyfél</span>
+        <strong>${esc(customer?.name || "Nincs ügyfél")}</strong>
+        <small>${esc(quote.projectAddress || customer?.address || "Nincs projekt cím")}</small>
+      </div>
+      <div class="quote-overview-card">
+        <span>Tételek</span>
+        <strong>${quote.items.length} db</strong>
+        <small>${esc(quote.productionDeadline || state.settings.defaultProductionDeadline || "Nincs határidő")}</small>
+      </div>
+      <div class="quote-overview-card total">
+        <span>Fizetendő bruttó</span>
+        <strong>${money(totals.gross)}</strong>
+        <small>Nettó ${money(totals.net)} · ÁFA ${money(totals.vatAmount)}</small>
+      </div>
+      ${alerts.length ? `
+        <div class="quote-alerts">
+          ${alerts.map((alert) => `<span>${icon("alert")}${esc(alert)}</span>`).join("")}
+        </div>
+      ` : ""}
+    </section>
   `;
 }
 
@@ -1316,6 +1354,7 @@ function renderItemEditor(quote, draftCalc) {
           <h2 class="panel-title">${ui.selectedItemId ? "Tétel szerkesztése" : "Új tétel"}</h2>
           <p class="panel-note">${isInterior ? "Beltéri ajtónál modellalapár, kivitel, tok, kilincs és zár alapján számolunk." : "Válaszd ki a típust, profilt, üveget, színt és kiegészítőket."}</p>
         </div>
+        ${ui.selectedItemId ? `<span class="editor-status">Szerkesztés alatt</span>` : ""}
         <button class="button icon-only" title="Új tétel" data-action="clear-item">${icon("plus")}</button>
       </div>
       <div class="panel-body">
@@ -1631,10 +1670,12 @@ function renderItemsTable(quote) {
           <tbody>
             ${quote.items.map((item) => {
               const calc = calcItem(item, quote);
+              const isActive = ui.selectedItemId === item.id;
               return `
-                <tr class="selectable ${ui.selectedItemId === item.id ? "active" : ""}" data-action="select-item" data-id="${item.id}">
+                <tr class="selectable ${isActive ? "active" : ""}" data-action="select-item" data-id="${item.id}">
                   <td>
-                    <strong>${esc(itemTitle(item))}</strong><br />
+                    <strong>${esc(itemTitle(item))}</strong>
+                    ${isActive ? `<span class="item-active-label">Aktív</span>` : ""}<br />
                     <span class="panel-note">${esc(itemSubtitle(item))} · ${number(item.quantity)} db</span>
                   </td>
                   <td>${number(item.width)} x ${number(item.height)} mm</td>

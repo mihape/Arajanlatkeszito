@@ -283,6 +283,68 @@ button {
   align-items: stretch;
 }
 
+.quote-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.quote-overview-card {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 34px rgba(23, 33, 36, 0.06);
+}
+
+.quote-overview-card span,
+.quote-overview-card small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.quote-overview-card strong {
+  overflow: hidden;
+  font-size: 18px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote-overview-card.total {
+  border-color: rgba(15, 118, 110, 0.22);
+  background: var(--teal-2);
+}
+
+.quote-overview-card.total strong {
+  color: var(--teal);
+}
+
+.quote-alerts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quote-alerts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #f0d09a;
+  border-radius: 8px;
+  background: var(--amber-2);
+  color: #8a560d;
+  font-size: 12px;
+  font-weight: 760;
+}
+
 .panel {
   min-width: 0;
   border: 1px solid var(--line);
@@ -318,6 +380,17 @@ button {
 
 .panel-body {
   padding: 16px;
+}
+
+.editor-status {
+  align-self: center;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--teal-2);
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 850;
+  white-space: nowrap;
 }
 
 .form-grid {
@@ -503,6 +576,19 @@ button {
   font-size: 22px;
 }
 
+.summary-row.internal-only {
+  margin: -2px 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(201, 131, 26, 0.22);
+  border-radius: 8px;
+  background: var(--amber-2);
+}
+
+.summary-row.internal-only span,
+.summary-row.internal-only strong {
+  color: #8a560d;
+}
+
 .table-wrap {
   width: 100%;
   overflow: auto;
@@ -545,6 +631,24 @@ tr.selectable {
 tr.selectable:hover td,
 tr.selectable.active td {
   background: #f3fbfa;
+}
+
+tr.selectable.active td:first-child {
+  box-shadow: inset 4px 0 0 var(--teal);
+}
+
+.item-active-label {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 7px;
+  min-height: 22px;
+  padding: 0 7px;
+  border-radius: 8px;
+  background: var(--teal-2);
+  color: var(--teal);
+  font-size: 10px;
+  font-weight: 850;
+  vertical-align: middle;
 }
 
 .tag-row {
@@ -1091,6 +1195,7 @@ tr.selectable.active td {
   }
 
   .quote-workspace,
+  .quote-overview,
   .split,
   .manage-grid,
   .dashboard-metrics,

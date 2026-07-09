@@ -15,7 +15,7 @@ function test(name, fn) {
   }
 }
 
-function renderApp(search) {
+function renderApp(search, afterRenderScript = "") {
   const appElement = { innerHTML: "" };
   const storage = new Map();
   const context = {
@@ -50,6 +50,7 @@ function renderApp(search) {
   vm.runInContext(fs.readFileSync(path.join(root, "src/shared/pricing-calculations.js"), "utf8"), context);
   vm.runInContext(fs.readFileSync(path.join(root, "src/shared/matrix-import.js"), "utf8"), context);
   vm.runInContext(fs.readFileSync(path.join(root, "src/renderer/app.js"), "utf8"), context);
+  if (afterRenderScript) vm.runInContext(afterRenderScript, context);
   return appElement.innerHTML;
 }
 
@@ -97,4 +98,13 @@ test("quotes dashboard renders workflow filters and version metadata", () => {
   assert(html.includes("Verzió"));
   assert(html.includes("v1"));
   assert(html.includes("Kezdő állapot"));
+});
+
+test("quote editor renders overview and active item cues", () => {
+  const html = renderApp("?mode=demo", "ui.view = 'quote-editor'; ui.selectedItemId = state.quotes[0].items[0].id; ui.itemDraft = normalizeItem(state.quotes[0].items[0]); render();");
+
+  assert(html.includes("quote-overview"));
+  assert(html.includes("Fizetendő bruttó"));
+  assert(html.includes("Aktív"));
+  assert(html.includes("Szerkesztés alatt"));
 });
