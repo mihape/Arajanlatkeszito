@@ -589,6 +589,60 @@ button {
   color: #8a560d;
 }
 
+.presentation-panel {
+  border-color: rgba(15, 118, 110, 0.2);
+  background:
+    linear-gradient(180deg, rgba(15, 118, 110, 0.05), transparent 42%),
+    #fff;
+}
+
+.presentation-body {
+  display: grid;
+  gap: 12px;
+}
+
+.presentation-visual {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  border: 1px dashed rgba(15, 118, 110, 0.3);
+  border-radius: 8px;
+  background: #fbfdfd;
+  overflow: hidden;
+}
+
+.presentation-visual .opening-svg {
+  width: min(86%, 240px);
+  max-height: 132px;
+}
+
+.presentation-visual .preview-image {
+  max-width: 90%;
+  max-height: 132px;
+  box-shadow: none;
+}
+
+.presentation-body p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.presentation-totals {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  border-radius: 8px;
+  background: var(--teal-2);
+}
+
+.presentation-totals .summary-row {
+  padding-bottom: 8px;
+  border-color: rgba(15, 118, 110, 0.16);
+}
+
 .table-wrap {
   width: 100%;
   overflow: auto;

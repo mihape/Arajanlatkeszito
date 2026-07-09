@@ -988,8 +988,43 @@ function renderQuotesView(quote) {
             ${summaryRow("Tétel ügyfél bruttó", money(draftCalc.gross), "total")}
           </div>
         </section>
+
+        ${renderPresentationPreview(quote, totals)}
       </aside>
     </div>
+  `;
+}
+
+function renderPresentationPreview(quote, totals) {
+  const item = quote.items.find((row) => row.id === ui.selectedItemId) || quote.items[0] || ui.itemDraft;
+  const image = item.productTypeId === "interior-door" ? getInteriorDoorImage(item) : state.openingImages?.[item.openingTypeId];
+  return `
+    <section class="panel presentation-panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Prezentációs előnézet</h2>
+          <p class="panel-note">Ügyfélnek szánt nézet: csak eladási árak és szerkezeti kép/rajz.</p>
+        </div>
+      </div>
+      <div class="panel-body presentation-body">
+        <div class="presentation-visual">
+          ${image ? `<img class="preview-image" src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height)}
+        </div>
+        <div>
+          <strong>${esc(itemTitle(item))}</strong>
+          <p>${number(item.width)} x ${number(item.height)} mm · ${number(item.quantity || 1)} db</p>
+        </div>
+        <div class="presentation-totals">
+          ${summaryRow("Nettó", money(totals.net))}
+          ${summaryRow(`ÁFA ${vatLabel(quote)}`, money(totals.vatAmount))}
+          ${summaryRow("Bruttó", money(totals.gross), "total")}
+        </div>
+        <div class="tag-row">
+          <span class="tag teal">Beszerzési ár nélkül</span>
+          <span class="tag">Ügyfél PDF irány</span>
+        </div>
+      </div>
+    </section>
   `;
 }
 

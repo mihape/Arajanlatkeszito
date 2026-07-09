@@ -104,6 +104,8 @@ test("quote editor renders overview and active item cues", () => {
   const html = renderApp("?mode=demo", "ui.view = 'quote-editor'; ui.selectedItemId = state.quotes[0].items[0].id; ui.itemDraft = normalizeItem(state.quotes[0].items[0]); render();");
 
   assert(html.includes("quote-overview"));
+  assert(html.includes("Prezentációs előnézet"));
+  assert(html.includes("Beszerzési ár nélkül"));
   assert(html.includes("Fizetendő bruttó"));
   assert(html.includes("Aktív"));
   assert(html.includes("Szerkesztés alatt"));

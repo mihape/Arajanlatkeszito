@@ -120,6 +120,13 @@ Cel: az app legyen kiprobalhato Windows RC-kent, ures sajat adatbazissal induljo
 - Prezentacios irany elokeszitese: ugyfel arak, szerkezeti rajz/kep helye, belso arak elrejtese ugyfelnezetben.
 - Legfeljebb 1-1 fiktiv pelda vagy kesobbi importalhato minta, valos gyartoi/ugyfel/adat nelkul.
 
+Nem cel ebben a korben:
+
+- Teljes kulon ugyfelprezentacios uzemmod.
+- Kulon prezentacios navigacio vagy vetitesi nezet.
+- Automatikus, meretaranyos gyartmanyrajz minden nyitastipusra.
+- Ugyfelenkent testreszabhato prezentacios sablon.
+
 Elfogadasi feltetel:
 
 - Windows RC build letoltheto es telepitheto.
