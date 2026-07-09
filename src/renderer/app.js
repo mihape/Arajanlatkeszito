@@ -2157,77 +2157,150 @@ function renderInteriorDoorsView() {
 }
 
 function renderMatricesView() {
-  const profile = getProfile(ui.selectedMatrixProfileId) || state.catalog.profiles[0];
-  const opening = exteriorOpeningTypes().find((item) => item.id === ui.selectedMatrixProductType) || exteriorOpeningTypes()[0];
+  const profiles = state.catalog.profiles || [];
+  const openings = exteriorOpeningTypes();
+  if (!profiles.length || !openings.length) return renderMissingMatrixSetup(profiles, openings);
+
+  const profile = getProfile(ui.selectedMatrixProfileId) || profiles[0];
+  const opening = openings.find((item) => item.id === ui.selectedMatrixProductType) || openings[0];
   ui.selectedMatrixProductType = opening.id;
   const key = matrixKey(profile.id, opening.id);
   const matrix = state.catalog.matrices[key] || createMatrix(profile, matrixTypeForOpening(opening));
   state.catalog.matrices[key] = matrix;
+  const summary = matrixSetupSummary(matrix);
   return `
-    <section class="panel">
-      <div class="panel-header">
-        <div>
-          <h2 class="panel-title">100 mm-es ármátrix</h2>
-          <p class="panel-note">A kalkulátor felfelé kerekít a következő 100 mm-es cellára. A „Tilt” jelölés nem gyártható méretet jelent.</p>
+    <div class="workspace-main">
+      <section class="catalog-overview">
+        <div class="catalog-overview-copy">
+          <span class="dashboard-mode">Ármátrix előkészítés</span>
+          <h2>${esc(profile.manufacturer)} · ${esc(profile.name)}</h2>
+          <p>${esc(opening.name)} mátrixa. Import után nézd át a hiányzó és nem gyártható cellákat, mert az ajánlatkészítő ezek alapján engedi vagy tiltja a méretet.</p>
         </div>
-      </div>
-      <div class="panel-body matrix-layout">
-        <div class="matrix-toolbar">
-          <div class="field">
-            <label>Profil</label>
-            <select data-ui="selectedMatrixProfileId">
-              ${state.catalog.profiles.map((item) => `<option value="${item.id}" ${item.id === profile.id ? "selected" : ""}>${esc(item.manufacturer)} · ${esc(item.name)}</option>`).join("")}
-            </select>
-          </div>
-          <div class="field">
-            <label>Nyílászáró típus</label>
-            <select data-ui="selectedMatrixProductType">
-              ${exteriorOpeningTypes().map((item) => `<option value="${item.id}" ${item.id === opening.id ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-            </select>
-          </div>
-          <button class="button" data-action="save-matrix">${icon("save")}Mentés</button>
+        <div class="catalog-overview-metrics">
+          ${catalogMetric("Raszter", `${matrix.widths.length} x ${matrix.heights.length}`, `${number(summary.totalCells)} cella`)}
+          ${catalogMetric("Kitöltött ár", `${number(summary.priceCount)} db`, `${number(summary.missingCount)} hiányzó / nulla`)}
+          ${catalogMetric("Nem gyártható", `${number(summary.blockedCount)} db`, "Tiltott méretként kezelve")}
         </div>
+      </section>
 
-        <div class="table-wrap">
-          <table class="matrix-table">
-            <thead>
-              <tr>
-                <th>Mag. \\ Szél.</th>
-                ${matrix.widths.map((width) => `<th class="numeric">${width}</th>`).join("")}
-              </tr>
-            </thead>
-            <tbody>
-              ${matrix.heights.map((height) => `
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">100 mm-es ármátrix</h2>
+            <p class="panel-note">A kalkulátor felfelé kerekít a következő 100 mm-es cellára. A „Nem” jelölés nem gyártható méretet jelent.</p>
+          </div>
+          <div class="tag-row">
+            ${matrixSummaryTags(summary)}
+          </div>
+        </div>
+        <div class="panel-body matrix-layout">
+          <div class="matrix-toolbar">
+            <div class="field">
+              <label>Profil</label>
+              <select data-ui="selectedMatrixProfileId">
+                ${profiles.map((item) => `<option value="${item.id}" ${item.id === profile.id ? "selected" : ""}>${esc(item.manufacturer)} · ${esc(item.name)}</option>`).join("")}
+              </select>
+            </div>
+            <div class="field">
+              <label>Nyílászáró típus</label>
+              <select data-ui="selectedMatrixProductType">
+                ${openings.map((item) => `<option value="${item.id}" ${item.id === opening.id ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+              </select>
+            </div>
+            <button class="button" data-action="save-matrix">${icon("save")}Mentés</button>
+          </div>
+
+          ${summary.missingCount ? `<div class="warning-box">${icon("alert")}Ebben a mátrixban még ${number(summary.missingCount)} üres vagy nulla árú cella van. Ha ezek nem gyárthatók, jelöld őket „Nem” cellaként.</div>` : ""}
+
+          <div class="table-wrap">
+            <table class="matrix-table">
+              <thead>
                 <tr>
-                  <td>${height}</td>
-                  ${matrix.widths.map((width) => {
-                    const key = `${width}x${height}`;
-                    const blocked = Boolean(matrix.blocked?.[key]);
-                    return `
-                      <td class="${blocked ? "matrix-blocked" : ""}">
-                        <div class="matrix-cell">
-                          <input type="number" min="0" step="100" data-matrix-cell="${key}" value="${esc(matrix.prices[key] || 0)}" ${blocked ? "disabled" : ""} />
-                          <label title="Nem gyártható méret"><input type="checkbox" data-matrix-blocked="${key}" ${blocked ? "checked" : ""} /> Nem</label>
-                        </div>
-                      </td>
-                    `;
-                  }).join("")}
+                  <th>Mag. \\ Szél.</th>
+                  ${matrix.widths.map((width) => `<th class="numeric">${width}</th>`).join("")}
                 </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                ${matrix.heights.map((height) => `
+                  <tr>
+                    <td>${height}</td>
+                    ${matrix.widths.map((width) => {
+                      const key = `${width}x${height}`;
+                      const blocked = Boolean(matrix.blocked?.[key]);
+                      return `
+                        <td class="${blocked ? "matrix-blocked" : ""}">
+                          <div class="matrix-cell">
+                            <input type="number" min="0" step="100" data-matrix-cell="${key}" value="${esc(matrix.prices[key] || 0)}" ${blocked ? "disabled" : ""} />
+                            <label title="Nem gyártható méret"><input type="checkbox" data-matrix-blocked="${key}" ${blocked ? "checked" : ""} /> Nem</label>
+                          </div>
+                        </td>
+                      `;
+                    }).join("")}
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
 
-        <div class="field">
-          <label>CSV/TSV beillesztés</label>
-          <textarea id="matrixPaste" placeholder="Első sor: szélességek, első oszlop: magasságok. Tabulátorral, pontosvesszővel vagy vesszővel elválasztva."></textarea>
+          <div class="field">
+            <label>CSV/TSV beillesztés</label>
+            <textarea id="matrixPaste" placeholder="Első sor: szélességek, első oszlop: magasságok. Tabulátorral, pontosvesszővel vagy vesszővel elválasztva. Nem gyártható cellához írhatsz X, NEM vagy TILT értéket."></textarea>
+          </div>
+          <div class="actions" style="justify-content: flex-start;">
+            <button class="button" data-action="import-matrix">${icon("upload")}Beillesztett mátrix importálása</button>
+          </div>
+          ${renderMatrixImportReport()}
         </div>
-        <div class="actions" style="justify-content: flex-start;">
-          <button class="button" data-action="import-matrix">${icon("upload")}Beillesztett mátrix importálása</button>
+      </section>
+    </div>
+  `;
+}
+
+function renderMissingMatrixSetup(profiles, openings) {
+  return `
+    <div class="workspace-main">
+      <section class="catalog-overview">
+        <div class="catalog-overview-copy">
+          <span class="dashboard-mode">Ármátrix előkészítés</span>
+          <h2>Előbb a műanyag törzsadatokat kell felvinni</h2>
+          <p>Mátrixot csak profil és nyílászáró típus párosra lehet rögzíteni. Ha valamelyik hiányzik, az ajánlatkészítő nem tud megbízhatóan számolni.</p>
         </div>
-        ${renderMatrixImportReport()}
-      </div>
-    </section>
+        <div class="catalog-overview-metrics">
+          ${catalogMetric("Profil", `${profiles.length} db`, profiles.length ? "rendben" : "hiányzik")}
+          ${catalogMetric("Nyitástípus", `${openings.length} db`, openings.length ? "rendben" : "hiányzik")}
+          ${catalogMetric("Mátrix", "0 db", "nincs létrehozható páros")}
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-body">
+          <div class="empty">Nyisd meg a Műanyag nyílászárók menüt, hozz létre legalább egy profilt és egy nyitástípust, utána itt megjelenik a mátrix szerkesztő.</div>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function matrixSetupSummary(matrix) {
+  const cells = [];
+  matrix.heights.forEach((height) => {
+    matrix.widths.forEach((width) => cells.push(`${width}x${height}`));
+  });
+  const blockedCount = cells.filter((key) => Boolean(matrix.blocked?.[key])).length;
+  const priceCount = cells.filter((key) => !matrix.blocked?.[key] && Number(matrix.prices?.[key] || 0) > 0).length;
+  return {
+    totalCells: cells.length,
+    blockedCount,
+    priceCount,
+    missingCount: Math.max(0, cells.length - blockedCount - priceCount)
+  };
+}
+
+function matrixSummaryTags(summary) {
+  const complete = summary.missingCount === 0;
+  return `
+    <span class="tag ${complete ? "teal" : "amber"}">${complete ? "Kitöltött mátrix" : "Hiányos mátrix"}</span>
+    <span class="tag">${number(summary.priceCount)} ár</span>
+    <span class="tag">${number(summary.blockedCount)} nem gyártható</span>
   `;
 }
 

@@ -112,6 +112,16 @@ test("plastic catalog setup renders matrix coverage overview", () => {
   assert(html.includes("tiltott cella"));
 });
 
+test("matrix setup renders readiness metrics and import guidance", () => {
+  const html = renderApp("?mode=release", "ui.view = 'matrices'; render();");
+
+  assert(html.includes("Ármátrix előkészítés"));
+  assert(html.includes("Kitöltött ár"));
+  assert(html.includes("Nem gyártható"));
+  assert(html.includes("Kitöltött mátrix"));
+  assert(html.includes("Nem gyártható cellához írhatsz X, NEM vagy TILT értéket."));
+});
+
 test("quote editor renders overview and active item cues", () => {
   const html = renderApp("?mode=demo", "ui.view = 'quote-editor'; ui.selectedItemId = state.quotes[0].items[0].id; ui.itemDraft = normalizeItem(state.quotes[0].items[0]); render();");
 
