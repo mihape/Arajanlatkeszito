@@ -122,6 +122,16 @@ test("matrix setup renders readiness metrics and import guidance", () => {
   assert(html.includes("Nem gyártható cellához írhatsz X, NEM vagy TILT értéket."));
 });
 
+test("extras setup renders grouped accessory and installation overview", () => {
+  const html = renderApp("?mode=release", "ui.view = 'extras'; render();");
+
+  assert(html.includes("Kiegészítők és beépítés"));
+  assert(html.includes("Szín / üveg / toktoldó"));
+  assert(html.includes("Redőny / szúnyogháló"));
+  assert(html.includes("Kívül színes / kívül-belül színes külön felár"));
+  assert(html.includes("Fix, szélesség, kerület vagy felület alapú árazás"));
+});
+
 test("quote editor renders overview and active item cues", () => {
   const html = renderApp("?mode=demo", "ui.view = 'quote-editor'; ui.selectedItemId = state.quotes[0].items[0].id; ui.itemDraft = normalizeItem(state.quotes[0].items[0]); render();");
 

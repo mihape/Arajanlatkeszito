@@ -2323,8 +2323,26 @@ function renderMatrixImportReport() {
 }
 
 function renderExtrasView() {
+  const summary = extrasSetupSummary();
   return `
     <div class="workspace-main">
+      <section class="catalog-overview">
+        <div class="catalog-overview-copy">
+          <span class="dashboard-mode">Kiegészítők és beépítés</span>
+          <h2>Felárak, árkiegészítők és munkadíjak</h2>
+          <p>A színfelár, üvegezés, toktoldó, redőny, szúnyogháló és beépítés itt kerül törzsadatba. Az ajánlati tételnél innen választ a kalkulátor.</p>
+          <div class="tag-row">
+            <span class="tag teal">Kívül színes / kívül-belül színes külön felár</span>
+            <span class="tag">Fix, szélesség, kerület vagy felület alapú árazás</span>
+          </div>
+        </div>
+        <div class="catalog-overview-metrics">
+          ${catalogMetric("Szín / üveg / toktoldó", `${summary.colorCount}/${summary.glassCount}/${summary.extensionCount}`, "db feltöltött törzsadat")}
+          ${catalogMetric("Redőny / szúnyogháló", `${summary.shutterCount}/${summary.mosquitoCount}`, "kiegészítő csoport")}
+          ${catalogMetric("Beépítés", `${summary.installCount} db`, summary.installCount ? "külön választható díjak" : "még hiányzik")}
+        </div>
+      </section>
+
       <section class="panel">
         <div class="panel-header">
           <div>
@@ -2432,6 +2450,17 @@ function renderExtrasView() {
       </section>
     </div>
   `;
+}
+
+function extrasSetupSummary() {
+  return {
+    colorCount: state.catalog.colors?.length || 0,
+    glassCount: state.catalog.glasses?.length || 0,
+    extensionCount: state.catalog.extensions?.length || 0,
+    shutterCount: accessoriesBy("shutter").length,
+    mosquitoCount: accessoriesBy("mosquito").length,
+    installCount: accessoriesBy("install").length
+  };
 }
 
 function editableTable(collection, rows, fields) {
