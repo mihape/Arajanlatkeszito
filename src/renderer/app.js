@@ -1012,14 +1012,21 @@ function vatOptions() {
 function renderQuotesDashboard() {
   const metrics = quoteDashboardMetrics();
   const filteredQuotes = getFilteredQuotes();
+  const setupSteps = dashboardSetupSteps();
+  const setupDone = setupSteps.filter((step) => step.done).length;
+  const hasQuotes = state.quotes.length > 0;
   return `
     <div class="workspace-main">
       <section class="dashboard-hero">
-        <div>
-          <h2>Árajánlat áttekintés</h2>
-          <p>Gyors státuszkezelés, PDF export, törlés és megnyitás szerkesztésre.</p>
+        <div class="dashboard-hero-copy">
+          <span class="dashboard-mode">${APP_MODE === "release" ? "Tiszta helyi adatbázis" : "Demo mód - fiktív adatok"}</span>
+          <h2>${hasQuotes ? "Árajánlat áttekintés" : "Kezdhetjük a saját rendszer feltöltését"}</h2>
+          <p>${hasQuotes ? "Gyors státuszkezelés, PDF export, törlés és megnyitás szerkesztésre." : "Első körben vidd fel vagy ellenőrizd a törzsadatokat, utána készíthető az első ügyfélajánlat."}</p>
         </div>
-        <button class="button primary" data-action="new-quote">${icon("plus")}Új ajánlat</button>
+        <div class="dashboard-hero-actions">
+          <button class="button" data-view="profiles">${icon("factory")}Törzsadatok</button>
+          <button class="button primary" data-action="new-quote">${icon("plus")}Új ajánlat</button>
+        </div>
       </section>
 
       <div class="dashboard-metrics">
@@ -1029,14 +1036,30 @@ function renderQuotesDashboard() {
         ${dashboardMetric("Elutasítva", `${metrics.rejected} db`, "Lezárt vesztes ajánlatok")}
       </div>
 
+      <section class="setup-panel">
+        <div class="setup-intro">
+          <div>
+            <h2>Első feltöltési sorrend</h2>
+            <p>Saját gyártói adatokkal dolgozz: a minta törzsadatokat ellenőrizd, cseréld vagy töröld, mielőtt éles ajánlatot adsz ki.</p>
+          </div>
+          <div class="setup-progress">
+            <strong>${setupDone}/${setupSteps.length}</strong>
+            <span>lépés rögzítve</span>
+          </div>
+        </div>
+        <div class="setup-steps">
+          ${setupSteps.map((step, index) => renderSetupStep(step, index)).join("")}
+        </div>
+      </section>
+
       <section class="panel">
         <div class="panel-header">
           <div>
             <h2 class="panel-title">Ajánlatok</h2>
-            <p class="panel-note">Kattints a Megnyitás gombra a részletes szerkesztőhöz. Szűrt találat: ${filteredQuotes.length} db.</p>
+            <p class="panel-note">${hasQuotes ? `Kattints a Megnyitás gombra a részletes szerkesztőhöz. Szűrt találat: ${filteredQuotes.length} db.` : "Itt jelennek majd meg a mentett ajánlatok. Kezdéshez hozz létre ügyfelet és első ajánlatot."}</p>
           </div>
         </div>
-        <div class="form-grid four" style="margin-bottom: 14px;">
+        <div class="form-grid four dashboard-filters">
           <label>
             Keresés
             <input data-dashboard-search value="${esc(ui.quoteSearch)}" placeholder="Ajánlatszám, ügyfél, cím" />
@@ -1059,16 +1082,18 @@ function renderQuotesDashboard() {
             <input type="date" data-dashboard-created-from value="${esc(ui.quoteCreatedFrom)}" />
           </label>
         </div>
-        <div class="form-grid three" style="margin-bottom: 14px;">
+        <div class="form-grid three dashboard-filters">
           <label>
             Határidő
             <input data-dashboard-deadline value="${esc(ui.quoteDeadlineFilter)}" placeholder="pl. 6-8 hét" />
           </label>
-          <label>
-            Rendezés
-            <input value="Legutóbb módosított elöl" disabled />
-          </label>
-          <div></div>
+          <div class="sort-note">
+            <span>Rendezés</span>
+            <strong>Legutóbb módosított elöl</strong>
+          </div>
+          <div class="dashboard-filter-actions">
+            <button class="button" data-action="new-customer">${icon("users")}Új ügyfél</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table class="dashboard-table">
@@ -1088,11 +1113,93 @@ function renderQuotesDashboard() {
               </tr>
             </thead>
             <tbody>
-              ${filteredQuotes.map((quote) => renderDashboardQuoteRow(quote)).join("") || `<tr><td colspan="11"><div class="empty">${state.quotes.length ? "Nincs találat." : "Még nincs ajánlat."}</div></td></tr>`}
+              ${filteredQuotes.map((quote) => renderDashboardQuoteRow(quote)).join("") || `<tr><td colspan="11">${renderDashboardEmptyState()}</td></tr>`}
             </tbody>
           </table>
         </div>
       </section>
+    </div>
+  `;
+}
+
+function dashboardSetupSteps() {
+  const catalog = state.catalog;
+  const hasMatrix = Object.keys(catalog.matrices || {}).length > 0;
+  const hasExtras = Boolean(catalog.colors?.length || catalog.glasses?.length || catalog.extensions?.length || catalog.accessories?.length);
+  return [
+    {
+      title: "Műanyag nyílászárók",
+      note: "Gyártók, profilok, Uf/Ug adatok és nyitástípusok.",
+      view: "profiles",
+      done: catalog.profiles.length > 0 && catalog.exteriorOpenings.length > 0,
+      softDone: true
+    },
+    {
+      title: "Ármátrixok",
+      note: "Profilonként és nyitástípusonként saját árlista.",
+      view: "matrices",
+      done: hasMatrix,
+      softDone: true
+    },
+    {
+      title: "Kiegészítők",
+      note: "Színek, üvegek, toktoldók, redőnyök, szúnyoghálók, beépítés.",
+      view: "extras",
+      done: hasExtras,
+      softDone: true
+    },
+    {
+      title: "Beltéri ajtók",
+      note: "Gyártók, modellek, dekor/CPL ár, tok, kilincs és zár.",
+      view: "interior",
+      done: catalog.interiorDoors.manufacturers.length > 0 && catalog.interiorDoors.models.length > 0,
+      softDone: true
+    },
+    {
+      title: "Ügyfelek",
+      note: "Név, cím, telefon, email és megjegyzés.",
+      view: "customers",
+      done: state.customers.length > 0
+    },
+    {
+      title: "Ajánlatok",
+      note: "Tételek, ÁFA, határidő, ügyfél PDF és belső PDF.",
+      view: "quotes",
+      done: state.quotes.length > 0
+    }
+  ];
+}
+
+function renderSetupStep(step, index) {
+  const status = step.done ? (step.softDone ? "Ellenőrizd" : "Kész") : "Következő";
+  return `
+    <button class="setup-step ${step.done ? "done" : "pending"}" data-view="${esc(step.view)}">
+      <span class="setup-step-index">${index + 1}</span>
+      <span class="setup-step-copy">
+        <strong>${esc(step.title)}</strong>
+        <small>${esc(step.note)}</small>
+      </span>
+      <span class="setup-step-status">${esc(status)}</span>
+    </button>
+  `;
+}
+
+function renderDashboardEmptyState() {
+  if (state.quotes.length) {
+    return `<div class="empty">Nincs találat a megadott szűrésre.</div>`;
+  }
+  return `
+    <div class="dashboard-empty">
+      <div class="dashboard-empty-mark">${icon("file")}</div>
+      <div>
+        <h3>Még nincs ajánlat.</h3>
+        <p>Hozd létre az első ügyfelet, ellenőrizd a törzsadatokat, majd indíts egy új ajánlatot. Az adatok helyben maradnak a gépen.</p>
+      </div>
+      <div class="dashboard-empty-actions">
+        <button class="button" data-action="new-customer">${icon("users")}Új ügyfél</button>
+        <button class="button" data-view="profiles">${icon("factory")}Törzsadatok</button>
+        <button class="button primary" data-action="new-quote">${icon("plus")}Új ajánlat</button>
+      </div>
     </div>
   `;
 }

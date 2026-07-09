@@ -70,6 +70,8 @@ test("release mode starts without demo customer or quote", () => {
   const html = renderApp("?mode=release");
 
   assert(html.includes("Még nincs ajánlat."));
+  assert(html.includes("Első feltöltési sorrend"));
+  assert(html.includes("Tiszta helyi adatbázis"));
   assert(!html.includes("Demo Partner Kft."));
   assert(!html.includes("AJ-2026-0001"));
 });
@@ -90,6 +92,7 @@ test("quotes dashboard renders workflow filters and version metadata", () => {
   assert(html.includes("data-dashboard-customer"));
   assert(html.includes("data-dashboard-created-from"));
   assert(html.includes("data-dashboard-deadline"));
+  assert(html.includes("data-view=\"profiles\""));
   assert(html.includes("Módosítva"));
   assert(html.includes("Verzió"));
   assert(html.includes("v1"));
