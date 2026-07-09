@@ -132,6 +132,16 @@ test("extras setup renders grouped accessory and installation overview", () => {
   assert(html.includes("Fix, szélesség, kerület vagy felület alapú árazás"));
 });
 
+test("interior door setup renders custom and standard catalog overview", () => {
+  const html = renderApp("?mode=release", "ui.view = 'interior'; render();");
+
+  assert(html.includes("Beltéri ajtó törzsadatok"));
+  assert(html.includes("Egyedi és standard ajtók külön logikával"));
+  assert(html.includes("egyedi gyártó"));
+  assert(html.includes("standard gyártó"));
+  assert(html.includes("modell-szín kép"));
+});
+
 test("quote editor renders overview and active item cues", () => {
   const html = renderApp("?mode=demo", "ui.view = 'quote-editor'; ui.selectedItemId = state.quotes[0].items[0].id; ui.itemDraft = normalizeItem(state.quotes[0].items[0]); render();");
 

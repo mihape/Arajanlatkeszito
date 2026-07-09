@@ -1946,6 +1946,7 @@ function catalogMetric(label, value, note) {
 function renderInteriorDoorsView() {
   ensureInteriorUiDefaults();
   const catalog = state.catalog.interiorDoors;
+  const summary = interiorDoorSetupSummary(catalog);
   const selectedManufacturer = interiorManufacturer(ui.selectedInteriorManufacturerId);
   const visibleModels = interiorModelsForManufacturer(selectedManufacturer?.id);
   const imageModel = interiorModel(ui.selectedInteriorModelId) || visibleModels[0] || catalog.models[0];
@@ -1953,6 +1954,24 @@ function renderInteriorDoorsView() {
   const image = imageModel?.images?.[imageColor?.id];
   return `
     <div class="workspace-main">
+      <section class="catalog-overview">
+        <div class="catalog-overview-copy">
+          <span class="dashboard-mode">Beltéri ajtó törzsadatok</span>
+          <h2>Egyedi és standard ajtók külön logikával</h2>
+          <p>Az egyedi méretes gyártóknál modellár és centiméteres tokfelár, a standard gyártóknál rögzített méretek alapján dolgozik a kalkulátor.</p>
+          <div class="tag-row">
+            <span class="tag teal">${number(summary.customManufacturerCount)} egyedi gyártó</span>
+            <span class="tag amber">${number(summary.standardManufacturerCount)} standard gyártó</span>
+            <span class="tag">${number(summary.imageCount)} modell-szín kép</span>
+          </div>
+        </div>
+        <div class="catalog-overview-metrics">
+          ${catalogMetric("Gyártó / modell", `${summary.manufacturerCount}/${summary.modelCount}`, "db törzsadat")}
+          ${catalogMetric("Szín / tok", `${summary.colorCount}/${summary.frameCount}`, "választható opció")}
+          ${catalogMetric("Kilincs / zár", `${summary.handleCount}/${summary.lockCount}`, "feláras tétel")}
+        </div>
+      </section>
+
       <div class="manage-grid">
         <section class="panel">
           <div class="panel-header">
@@ -2154,6 +2173,23 @@ function renderInteriorDoorsView() {
       </div>
     </div>
   `;
+}
+
+function interiorDoorSetupSummary(catalog) {
+  const imageCount = (catalog.models || []).reduce((sum, model) => {
+    return sum + Object.values(model.images || {}).filter(Boolean).length;
+  }, 0);
+  return {
+    manufacturerCount: catalog.manufacturers?.length || 0,
+    customManufacturerCount: (catalog.manufacturers || []).filter((item) => item.sizing === "custom").length,
+    standardManufacturerCount: (catalog.manufacturers || []).filter((item) => item.sizing === "standard").length,
+    modelCount: catalog.models?.length || 0,
+    colorCount: catalog.colors?.length || 0,
+    frameCount: catalog.frames?.length || 0,
+    handleCount: catalog.handles?.length || 0,
+    lockCount: catalog.locks?.length || 0,
+    imageCount
+  };
 }
 
 function renderMatricesView() {
