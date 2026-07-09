@@ -44,6 +44,41 @@ Az ures appban a javasolt feltoltesi sorrend:
 5. `Ugyfelek`: alap ugyfeladatok.
 6. `Ajanlatok`: elso ajanlat letrehozasa, tetel hozzaadasa, PDF export.
 
+## Torzsadat feltoltesi UX ellenorzes
+
+Az RC tesztelesnel ne csak azt ellenorizd, hogy mentheto-e az adat, hanem azt is, hogy a felulet segit-e a hianyzo torzsadatok felismereseben.
+
+### Ajanlatok dashboard
+
+- Az elso feltoltesi sorrend latszik.
+- A torzsadat lepesek nem tunnek kesznek, ha csak hianyos vagy ellenorizendo mintaadat van.
+- A lepesekbol ertheto, hova kell tovabbmenni.
+
+### Muanyag nyilaszarok
+
+- A felso attekinto mutatja a profilok, nyitastipusok es szukseges matrixok szamat.
+- Profilkartyankent latszik a matrix lefedettseg.
+- A minta profilok ellenorizendo adatkent jelennek meg.
+
+### Armatixok
+
+- Profil es nyitastipus nelkul az oldal nem omlik ossze, hanem jelzi, mit kell elobb felvinni.
+- Profil/nyitastipus parnal latszik a raszter merete, a kitoltott arak, a hianyzo/nulla cellak es a nem gyarthato cellak szama.
+- A CSV/TSV import szovege jelzi, hogy nem gyarthato cellahoz `X`, `NEM` vagy `TILT` ertek is hasznalhato.
+- Hibas importnal a rendszer nem menti ra a matrixra az adatot.
+
+### Kiegeszitok es beepites
+
+- A felso attekinto kulon mutatja a szin/uveg/toktoldo torzsadatokat.
+- A redony, szunyogháló es beepitesi tetelek darabszama kulon latszik.
+- A szin felaraknal kulon kezelheto a kivul szines es kivul-belul szines felar.
+
+### Belteri ajtok
+
+- A felso attekinto kulon jelzi az egyedi meretes es standard meretes gyartokat.
+- Latszik a modell, szin, tok, kilincs, zar es modell-szin kep feltoltes keszultsege.
+- Egyedi gyartonal a centiméteres tokfelar logika nem keveredik a standard meretes ajtokkal.
+
 ## Minimalis RC tesztforgatokonyv
 
 ### 1. Ures release ellenorzes
@@ -105,3 +140,4 @@ Az RC-ben meg nem teljes ugyfelprezentacios uzemmod keszul, de a felulet es PDF 
 - Windows kezi validacio: #15
 - Publikus repo safety gate: #1
 - RC/UX subissue-k: #18, #20, #21, #19 a #10 Phase 6 alatt.
+- Torzsadat es arlista feltoltesi UX epic: #22

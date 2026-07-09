@@ -14,6 +14,7 @@ This repository currently contains:
 - customer records
 - exterior plastic window/door profiles and opening types
 - price matrices with non-manufacturable cells
+- catalog setup overviews for profiles, matrices, accessories, installation items, and interior doors
 - interior door model pricing
 - accessories, installation items, VAT, margin, and print-friendly quote output
 - tested shared pricing calculations for matrix rounding, VAT, margin, accessories, and custom interior frames
