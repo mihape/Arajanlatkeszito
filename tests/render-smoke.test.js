@@ -73,6 +73,8 @@ test("release mode starts without demo customer or quote", () => {
   assert(html.includes("Még nincs ajánlat."));
   assert(html.includes("Első feltöltési sorrend"));
   assert(html.includes("Tiszta helyi adatbázis"));
+  assert(html.includes("Ellenőrizendő mintaadat"));
+  assert(html.includes("Hiányzik"));
   assert(!html.includes("Demo Partner Kft."));
   assert(!html.includes("AJ-2026-0001"));
 });

@@ -135,6 +135,26 @@ Elfogadasi feltetel:
 - Egy minimalis sajat vagy fiktiv peldaadatbol ajanlat es PDF keszitheto.
 - Az ugyfel PDF-ben nincs beszerzesi ar, haszon vagy fedezet.
 
+## 5.6 fazis - Torzsadat es arlista feltoltesi UX
+
+Cel: az uresen induló appot gyorsan, erthetoen es hibabiztosan fel lehessen tolteni sajat gyartokkal, profilokkal, nyitastipusokkal, armatixokkal, kiegeszitokkel, beepitesi tetelekekkel es belteri ajto torzsadatokkal.
+
+- Kozos torzsadat feltoltesi attekinto es keszultsegi allapot.
+- Muanyag profilok es nyitastipusok atlathatobb kezelese.
+- Armatix import es validacios visszajelzes kenyelmesitese.
+- Szinek, uvegek, toktoldok, redonyok, szunyoghalok es beepites tetelek jobb csoportositasa.
+- Belteri ajto gyarto, modell, szin, tok, kilincs, zar es kep feltoltesi UX finomitasa.
+- Minta/kezdo adatok egyertelmu jelolese: ellenorizendo vagy lecserelendo, nem vegleges sajat adat.
+
+Elfogadasi feltetel:
+
+- A felhasznalo egy helyen latja, mely torzsadat teruletek hianyoznak vagy ellenorizendok.
+- A feltoltesi attekintobol kozvetlenul elerhetok a megfelelo szerkeszto kepernyok.
+- Egy uj gyarto/profil/nyitastipus es hozza tartozo matrix utvonala kovetheto.
+- A matrix import hibai es nem gyarthato cellai mentés elott erthetoen latszanak.
+- A kiegeszito es beepitesi tetelek armodja egyertelmuen latszik.
+- A belteri ajto custom es standard meretes gyartoi utvonala nem keveredik.
+
 ## 6. fazis - CRM integracio
 
 Cel: kesobbi CRM-kapcsolat ugy, hogy az app helyben tovabbra is hasznalhato maradjon.

@@ -962,9 +962,19 @@ tr.selectable.active td:first-child {
   font-weight: 850;
 }
 
-.setup-step.done .setup-step-index {
+.setup-step.ready .setup-step-index {
   background: var(--teal);
   color: #fff;
+}
+
+.setup-step.sample .setup-step-index {
+  background: var(--amber);
+  color: #fff;
+}
+
+.setup-step.missing .setup-step-index {
+  background: #fff0ef;
+  color: var(--red);
 }
 
 .setup-step-copy {
@@ -987,6 +997,14 @@ tr.selectable.active td:first-child {
   line-height: 1.3;
 }
 
+.setup-step-copy em {
+  color: #405054;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 820;
+  line-height: 1.25;
+}
+
 .setup-step-status {
   align-self: start;
   padding: 4px 7px;
@@ -998,9 +1016,19 @@ tr.selectable.active td:first-child {
   white-space: nowrap;
 }
 
-.setup-step.done .setup-step-status {
+.setup-step.ready .setup-step-status {
+  background: var(--teal-2);
+  color: var(--teal);
+}
+
+.setup-step.sample .setup-step-status {
   background: var(--amber-2);
   color: var(--amber);
+}
+
+.setup-step.missing .setup-step-status {
+  background: #fff0ef;
+  color: var(--red);
 }
 
 .sort-note {

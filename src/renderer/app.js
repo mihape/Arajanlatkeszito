@@ -1086,7 +1086,7 @@ function renderQuotesDashboard() {
   const metrics = quoteDashboardMetrics();
   const filteredQuotes = getFilteredQuotes();
   const setupSteps = dashboardSetupSteps();
-  const setupDone = setupSteps.filter((step) => step.done).length;
+  const setupDone = setupSteps.filter((step) => step.status === "ready").length;
   const hasQuotes = state.quotes.length > 0;
   return `
     <div class="workspace-main">
@@ -1117,7 +1117,7 @@ function renderQuotesDashboard() {
           </div>
           <div class="setup-progress">
             <strong>${setupDone}/${setupSteps.length}</strong>
-            <span>lépés rögzítve</span>
+            <span>terület késznek tűnik</span>
           </div>
         </div>
         <div class="setup-steps">
@@ -1197,62 +1197,89 @@ function renderQuotesDashboard() {
 
 function dashboardSetupSteps() {
   const catalog = state.catalog;
-  const hasMatrix = Object.keys(catalog.matrices || {}).length > 0;
-  const hasExtras = Boolean(catalog.colors?.length || catalog.glasses?.length || catalog.extensions?.length || catalog.accessories?.length);
+  const sampleProfileIds = ["profile-aluplast-ideal4000", "profile-gealan-s9000"];
+  const sampleAccessoryIds = ["shutter-al-manual", "shutter-al-motor", "mosquito-isso", "mosquito-plisse", "install-window", "install-door", "install-shutter", "install-mosquito"];
+  const sampleInteriorIds = ["int-manufacturer-custom", "int-manufacturer-standard", "int-model-classic", "int-model-modern", "int-model-standard-line"];
+  const exteriorOpenings = catalog.exteriorOpenings || [];
+  const requiredMatrixKeys = [];
+  catalog.profiles.forEach((profile) => {
+    exteriorOpenings.forEach((opening) => requiredMatrixKeys.push(matrixKey(profile.id, opening.id)));
+  });
+  const matrixCount = requiredMatrixKeys.filter((key) => catalog.matrices?.[key]).length;
+  const missingMatrixCount = Math.max(0, requiredMatrixKeys.length - matrixCount);
+  const blockedCellCount = Object.values(catalog.matrices || {}).reduce((sum, matrix) => sum + Object.values(matrix.blocked || {}).filter(Boolean).length, 0);
+  const hasSampleProfiles = catalog.profiles.some((profile) => sampleProfileIds.includes(profile.id));
+  const hasSampleExtras = [
+    ...(catalog.colors || []),
+    ...(catalog.glasses || []),
+    ...(catalog.extensions || []),
+    ...(catalog.accessories || [])
+  ].some((item) => String(item.id || "").startsWith("color-") || String(item.id || "").startsWith("glass-") || String(item.id || "").startsWith("ext-") || sampleAccessoryIds.includes(item.id));
+  const hasSampleInterior = [
+    ...(catalog.interiorDoors.manufacturers || []),
+    ...(catalog.interiorDoors.models || [])
+  ].some((item) => sampleInteriorIds.includes(item.id));
   return [
     {
       title: "Műanyag nyílászárók",
       note: "Gyártók, profilok, Uf/Ug adatok és nyitástípusok.",
       view: "profiles",
-      done: catalog.profiles.length > 0 && catalog.exteriorOpenings.length > 0,
-      softDone: true
+      status: !catalog.profiles.length || !exteriorOpenings.length ? "missing" : hasSampleProfiles ? "sample" : "ready",
+      detail: `${catalog.profiles.length} profil · ${exteriorOpenings.length} nyitástípus`
     },
     {
       title: "Ármátrixok",
       note: "Profilonként és nyitástípusonként saját árlista.",
       view: "matrices",
-      done: hasMatrix,
-      softDone: true
+      status: !requiredMatrixKeys.length || missingMatrixCount ? "missing" : hasSampleProfiles ? "sample" : "ready",
+      detail: `${matrixCount}/${requiredMatrixKeys.length || 0} mátrix · ${blockedCellCount} tiltott cella`
     },
     {
       title: "Kiegészítők",
       note: "Színek, üvegek, toktoldók, redőnyök, szúnyoghálók, beépítés.",
       view: "extras",
-      done: hasExtras,
-      softDone: true
+      status: !(catalog.colors?.length && catalog.glasses?.length && catalog.extensions?.length && catalog.accessories?.length) ? "missing" : hasSampleExtras ? "sample" : "ready",
+      detail: `${catalog.colors.length} szín · ${catalog.glasses.length} üveg · ${catalog.accessories.length} kiegészítő`
     },
     {
       title: "Beltéri ajtók",
       note: "Gyártók, modellek, dekor/CPL ár, tok, kilincs és zár.",
       view: "interior",
-      done: catalog.interiorDoors.manufacturers.length > 0 && catalog.interiorDoors.models.length > 0,
-      softDone: true
+      status: !(catalog.interiorDoors.manufacturers.length && catalog.interiorDoors.models.length) ? "missing" : hasSampleInterior ? "sample" : "ready",
+      detail: `${catalog.interiorDoors.manufacturers.length} gyártó · ${catalog.interiorDoors.models.length} modell`
     },
     {
       title: "Ügyfelek",
       note: "Név, cím, telefon, email és megjegyzés.",
       view: "customers",
-      done: state.customers.length > 0
+      status: state.customers.length ? "ready" : "missing",
+      detail: `${state.customers.length} ügyfél`
     },
     {
       title: "Ajánlatok",
       note: "Tételek, ÁFA, határidő, ügyfél PDF és belső PDF.",
       view: "quotes",
-      done: state.quotes.length > 0
+      status: state.quotes.length ? "ready" : "missing",
+      detail: `${state.quotes.length} ajánlat`
     }
   ];
 }
 
 function renderSetupStep(step, index) {
-  const status = step.done ? (step.softDone ? "Ellenőrizd" : "Kész") : "Következő";
+  const statusLabel = {
+    ready: "Késznek tűnik",
+    sample: "Ellenőrizendő mintaadat",
+    missing: "Hiányzik"
+  }[step.status] || "Ellenőrizd";
   return `
-    <button class="setup-step ${step.done ? "done" : "pending"}" data-view="${esc(step.view)}">
+    <button class="setup-step ${esc(step.status)}" data-view="${esc(step.view)}">
       <span class="setup-step-index">${index + 1}</span>
       <span class="setup-step-copy">
         <strong>${esc(step.title)}</strong>
         <small>${esc(step.note)}</small>
+        <em>${esc(step.detail)}</em>
       </span>
-      <span class="setup-step-status">${esc(status)}</span>
+      <span class="setup-step-status">${esc(statusLabel)}</span>
     </button>
   `;
 }
