@@ -1521,6 +1521,91 @@ function statusClass(status) {
   return "draft";
 }
 
+function renderItemWorkflow(draft, draftCalc) {
+  const steps = itemWorkflowSteps(draft, draftCalc);
+  return `
+    <div class="configurator-workflow" aria-label="Konfigurálási lépések">
+      ${steps.map((step, index) => `
+        <div class="workflow-step ${step.status}">
+          <span class="workflow-step-index">${index + 1}</span>
+          <span>
+            <strong>${esc(step.title)}</strong>
+            <small>${esc(step.note)}</small>
+          </span>
+          <em>${esc(step.label)}</em>
+        </div>
+      `).join("")}
+    </div>
+    <div class="calculation-strip">
+      <div>
+        <span>Árazási alap</span>
+        <strong>${esc(draftCalc.priceBasisLabel)}</strong>
+        <small>${esc(draftCalc.priceBasisValue)}</small>
+      </div>
+      <div>
+        <span>Aktív tétel</span>
+        <strong>${money(draftCalc.net)}</strong>
+        <small>Nettó ügyfélár</small>
+      </div>
+      <div>
+        <span>Belső beszerzés</span>
+        <strong>${money(draftCalc.cost)}</strong>
+        <small>Haszon előtt</small>
+      </div>
+      <div class="${draftCalc.blocked ? "warning" : ""}">
+        <span>Gyárthatóság</span>
+        <strong>${draftCalc.blocked ? "Nem gyártható" : "Rendben"}</strong>
+        <small>${draftCalc.matrixNote || "Nincs figyelmeztetés"}</small>
+      </div>
+    </div>
+  `;
+}
+
+function itemWorkflowSteps(draft, draftCalc) {
+  const isInterior = draft.productTypeId === "interior-door";
+  const baseSteps = [
+    {
+      title: "Hely és típus",
+      note: itemMetaText(draft) || (isInterior ? "Beltéri ajtó tétel" : openingName(draft.openingTypeId)),
+      status: draft.productTypeId ? "ready" : "missing",
+      label: draft.productTypeId ? "Megadva" : "Hiányzik"
+    },
+    {
+      title: isInterior ? "Gyártó és modell" : "Profil és méret",
+      note: isInterior ? interiorItemTitle(draft) : `${number(draft.width)} x ${number(draft.height)} mm`,
+      status: itemHasMainData(draft, isInterior) ? "ready" : "missing",
+      label: itemHasMainData(draft, isInterior) ? "Számolható" : "Hiányzik"
+    },
+    {
+      title: "Árazási alap",
+      note: draftCalc.priceBasisValue || draftCalc.priceBasisLabel,
+      status: draftCalc.blocked ? "warning" : Number(draftCalc.parts?.base || 0) > 0 ? "ready" : "missing",
+      label: draftCalc.blocked ? "Tiltott méret" : Number(draftCalc.parts?.base || 0) > 0 ? "Ár van" : "Nincs ár"
+    },
+    {
+      title: "Kiegészítők és export",
+      note: itemAccessorySummary(draft),
+      status: draftCalc.blocked ? "warning" : "ready",
+      label: draftCalc.blocked ? "Ellenőrizd" : "PDF kész"
+    }
+  ];
+  return baseSteps;
+}
+
+function itemHasMainData(draft, isInterior) {
+  if (isInterior) return Boolean(draft.interiorManufacturerId && draft.interiorModelId && draft.interiorFinish);
+  return Boolean(draft.profileId && draft.openingTypeId && Number(draft.width) > 0 && Number(draft.height) > 0);
+}
+
+function itemAccessorySummary(draft) {
+  const items = [];
+  if (draft.installId) items.push("beépítés");
+  if (draft.shutterId) items.push("redőny");
+  if (draft.mosquitoId) items.push("szúnyogháló");
+  if (draft.extensionMm) items.push("toktoldó");
+  return items.length ? items.join(", ") : "Nincs külön kiegészítő";
+}
+
 function renderItemEditor(quote, draftCalc) {
   const draft = ui.itemDraft;
   const isInterior = draft.productTypeId === "interior-door";
@@ -1535,129 +1620,164 @@ function renderItemEditor(quote, draftCalc) {
         <button class="button icon-only" title="Új tétel" data-action="clear-item">${icon("plus")}</button>
       </div>
       <div class="panel-body">
+        ${renderItemWorkflow(draft, draftCalc)}
         ${isInterior ? renderInteriorItemFields(draft) : renderExteriorItemFields(draft)}
 
         <div class="actions" style="justify-content: space-between; margin-top: 16px;">
           <button class="button danger" data-action="delete-item" ${ui.selectedItemId ? "" : "disabled"}>${icon("trash")}Tétel törlése</button>
           <button class="button primary" data-action="save-item">${icon("save")}${ui.selectedItemId ? "Tétel frissítése" : "Tétel hozzáadása"}</button>
         </div>
-        <p class="panel-note">Aktív tétel nettó beszerzési ára: <strong>${money(draftCalc.cost)}</strong></p>
         ${draftCalc.blocked ? `<div class="warning-box">${icon("alert")}Ez a méret az ármátrixban nem gyárthatóként van jelölve, ezért a rendszer nem számol rá árat.</div>` : ""}
       </div>
     </section>
   `;
 }
 
+function configuratorSectionHead(index, title, note) {
+  return `
+    <div class="configurator-section-head">
+      <span class="configurator-section-index">${index}</span>
+      <div>
+        <strong>${esc(title)}</strong>
+        <small>${esc(note)}</small>
+      </div>
+    </div>
+  `;
+}
+
 function renderExteriorItemFields(draft) {
   return `
-    <div class="form-grid">
-      ${quoteItemMetaFields(draft)}
-      <div class="field">
-        <label>Nyílászáró típus</label>
-        <select data-bind-item="productTypeId">
-          ${productTypes.map((item) => `<option value="${item.id}" ${item.id === draft.productTypeId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Nyitáskép</label>
-        <select data-bind-item="openingTypeId">
-          ${exteriorOpeningTypes().map((item) => `<option value="${item.id}" ${item.id === draft.openingTypeId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Nyitásirány</label>
-        <select data-bind-item="openingDirection">
-          ${openingDirectionOptions.map((item) => `<option value="${item.id}" ${item.id === draft.openingDirection ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field full">
-        <label>Gyártó / profil</label>
-        <select data-bind-item="profileId">
-          ${state.catalog.profiles.map((profile) => `<option value="${profile.id}" ${profile.id === draft.profileId ? "selected" : ""}>${esc(profile.manufacturer)} · ${esc(profile.name)}</option>`).join("")}
-        </select>
-      </div>
-      ${dimensionFields(draft)}
-      <div class="field">
-        <label>Szín</label>
-        <select data-bind-item="colorId">
-          ${state.catalog.colors.map((item) => `<option value="${item.id}" ${item.id === draft.colorId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Színezés</label>
-        <select data-bind-item="colorMode">
-          <option value="outside" ${draft.colorMode === "outside" ? "selected" : ""}>Kívül színes</option>
-          <option value="both" ${draft.colorMode === "both" ? "selected" : ""}>Kívül-belül színes</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Üvegezés</label>
-        <select data-bind-item="glassId">
-          ${state.catalog.glasses.map((item) => `<option value="${item.id}" ${item.id === draft.glassId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Toktoldó</label>
-        <select data-bind-item="extensionMm">
-          <option value="">Nincs</option>
-          ${state.catalog.extensions.map((item) => `<option value="${item.mm}" ${String(item.mm) === String(draft.extensionMm) ? "selected" : ""}>${esc(item.mm)} mm · ${money(item.pricePerM)}/fm</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Toktoldó helye</label>
-        <select data-bind-item="extensionPlacement">
-          ${["Méreten kívül", "Méreten belül"].map((item) => `<option ${item === draft.extensionPlacement ? "selected" : ""}>${esc(item)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field full">
-        <span class="field-label">Toktoldó oldalai</span>
-        <div class="inline-checks">
-          ${["left:Bal", "right:Jobb", "top:Felül", "bottom:Alul"].map((pair) => {
-            const [key, label] = pair.split(":");
-            return `<label class="check"><input type="checkbox" data-side="${key}" ${draft.extensionSides?.[key] ? "checked" : ""} />${label}</label>`;
-          }).join("")}
+    <div class="configurator-flow">
+      <section class="configurator-section">
+        ${configuratorSectionHead(1, "Hely és nyitáskép", "Azonosítás, pozíció, típus és nyitásirány.")}
+        <div class="form-grid">
+          ${quoteItemMetaFields(draft)}
+          <div class="field">
+            <label>Nyílászáró típus</label>
+            <select data-bind-item="productTypeId">
+              ${productTypes.map((item) => `<option value="${item.id}" ${item.id === draft.productTypeId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>Nyitáskép</label>
+            <select data-bind-item="openingTypeId">
+              ${exteriorOpeningTypes().map((item) => `<option value="${item.id}" ${item.id === draft.openingTypeId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>Nyitásirány</label>
+            <select data-bind-item="openingDirection">
+              ${openingDirectionOptions.map((item) => `<option value="${item.id}" ${item.id === draft.openingDirection ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
         </div>
-      </div>
-      <div class="field">
-        <label>Redőny</label>
-        <select data-bind-item="shutterId">
-          <option value="">Nincs</option>
-          ${accessoriesBy("shutter").map((item) => `<option value="${item.id}" ${item.id === draft.shutterId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Redőny beépítés</label>
-        <select data-bind-item="shutterInstallId">
-          <option value="">Nincs</option>
-          ${accessoriesBy("install").map((item) => `<option value="${item.id}" ${item.id === draft.shutterInstallId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Szúnyogháló</label>
-        <select data-bind-item="mosquitoId">
-          <option value="">Nincs</option>
-          ${accessoriesBy("mosquito").map((item) => `<option value="${item.id}" ${item.id === draft.mosquitoId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Szúnyogháló beépítés</label>
-        <select data-bind-item="mosquitoInstallId">
-          <option value="">Nincs</option>
-          ${accessoriesBy("install").map((item) => `<option value="${item.id}" ${item.id === draft.mosquitoInstallId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Nyílászáró beépítés</label>
-        <select data-bind-item="installId">
-          <option value="">Nincs</option>
-          ${accessoriesBy("install").map((item) => `<option value="${item.id}" ${item.id === draft.installId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>UF / UG információ</label>
-        <input readonly value="${esc(formatThermalInfo(draft))}" />
-      </div>
-      ${noteField(draft)}
+      </section>
+
+      <section class="configurator-section">
+        ${configuratorSectionHead(2, "Profil és méret", "Gyártói profil, szélesség, magasság és darabszám.")}
+        <div class="form-grid">
+          <div class="field full">
+            <label>Gyártó / profil</label>
+            <select data-bind-item="profileId">
+              ${state.catalog.profiles.map((profile) => `<option value="${profile.id}" ${profile.id === draft.profileId ? "selected" : ""}>${esc(profile.manufacturer)} · ${esc(profile.name)}</option>`).join("")}
+            </select>
+          </div>
+          ${dimensionFields(draft)}
+        </div>
+      </section>
+
+      <section class="configurator-section">
+        ${configuratorSectionHead(3, "Árképző opciók", "Szín, üvegezés, hőtechnikai információ és toktoldó.")}
+        <div class="form-grid">
+          <div class="field">
+            <label>Szín</label>
+            <select data-bind-item="colorId">
+              ${state.catalog.colors.map((item) => `<option value="${item.id}" ${item.id === draft.colorId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>Színezés</label>
+            <select data-bind-item="colorMode">
+              <option value="outside" ${draft.colorMode === "outside" ? "selected" : ""}>Kívül színes</option>
+              <option value="both" ${draft.colorMode === "both" ? "selected" : ""}>Kívül-belül színes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Üvegezés</label>
+            <select data-bind-item="glassId">
+              ${state.catalog.glasses.map((item) => `<option value="${item.id}" ${item.id === draft.glassId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>UF / UG információ</label>
+            <input readonly value="${esc(formatThermalInfo(draft))}" />
+          </div>
+          <div class="field">
+            <label>Toktoldó</label>
+            <select data-bind-item="extensionMm">
+              <option value="">Nincs</option>
+              ${state.catalog.extensions.map((item) => `<option value="${item.mm}" ${String(item.mm) === String(draft.extensionMm) ? "selected" : ""}>${esc(item.mm)} mm · ${money(item.pricePerM)}/fm</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>Toktoldó helye</label>
+            <select data-bind-item="extensionPlacement">
+              ${["Méreten kívül", "Méreten belül"].map((item) => `<option ${item === draft.extensionPlacement ? "selected" : ""}>${esc(item)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field full">
+            <span class="field-label">Toktoldó oldalai</span>
+            <div class="inline-checks">
+              ${["left:Bal", "right:Jobb", "top:Felül", "bottom:Alul"].map((pair) => {
+                const [key, label] = pair.split(":");
+                return `<label class="check"><input type="checkbox" data-side="${key}" ${draft.extensionSides?.[key] ? "checked" : ""} />${label}</label>`;
+              }).join("")}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="configurator-section">
+        ${configuratorSectionHead(4, "Kiegészítők és beépítés", "Redőny, szúnyogháló és külön beépítési tételek.")}
+        <div class="form-grid">
+          <div class="field">
+            <label>Redőny</label>
+            <select data-bind-item="shutterId">
+              <option value="">Nincs</option>
+              ${accessoriesBy("shutter").map((item) => `<option value="${item.id}" ${item.id === draft.shutterId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>Redőny beépítés</label>
+            <select data-bind-item="shutterInstallId">
+              <option value="">Nincs</option>
+              ${accessoriesBy("install").map((item) => `<option value="${item.id}" ${item.id === draft.shutterInstallId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>Szúnyogháló</label>
+            <select data-bind-item="mosquitoId">
+              <option value="">Nincs</option>
+              ${accessoriesBy("mosquito").map((item) => `<option value="${item.id}" ${item.id === draft.mosquitoId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>Szúnyogháló beépítés</label>
+            <select data-bind-item="mosquitoInstallId">
+              <option value="">Nincs</option>
+              ${accessoriesBy("install").map((item) => `<option value="${item.id}" ${item.id === draft.mosquitoInstallId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>Nyílászáró beépítés</label>
+            <select data-bind-item="installId">
+              <option value="">Nincs</option>
+              ${accessoriesBy("install").map((item) => `<option value="${item.id}" ${item.id === draft.installId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          ${noteField(draft)}
+        </div>
+      </section>
     </div>
   `;
 }
@@ -1669,93 +1789,116 @@ function renderInteriorItemFields(draft) {
   const model = interiorModel(draft.interiorModelId);
   const sizes = parseInteriorSizes(manufacturer?.sizesText || "");
   return `
-    <div class="form-grid">
-      ${quoteItemMetaFields(draft)}
-      <div class="field">
-        <label>Nyílászáró típus</label>
-        <select data-bind-item="productTypeId">
-          ${productTypes.map((item) => `<option value="${item.id}" ${item.id === draft.productTypeId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Gyártó</label>
-        <select data-bind-item="interiorManufacturerId">
-          ${catalog.manufacturers.map((item) => `<option value="${item.id}" ${item.id === draft.interiorManufacturerId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>1. tétel: kivitel</label>
-        <select data-bind-item="interiorFinish">
-          ${interiorFinishOptions.map((item) => `<option value="${item.id}" ${item.id === draft.interiorFinish ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>2. tétel: ajtó modell</label>
-        <select data-bind-item="interiorModelId">
-          ${models.map((item) => `<option value="${item.id}" ${item.id === draft.interiorModelId ? "selected" : ""}>${esc(item.name)} · Dekor ${money(item.decorPrice)} / CPL ${money(item.cplPrice)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Szín</label>
-        <select data-bind-item="interiorColorId">
-          ${catalog.colors.map((item) => `<option value="${item.id}" ${item.id === draft.interiorColorId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      ${manufacturer?.sizing === "custom" && model?.customFrameEnabled ? `
-        <div class="field full">
-          <span class="field-label">3. tétel: tokvastagság</span>
-          <label class="check" style="width: max-content;">
-            <input type="checkbox" data-bool-item="interiorCustomFrame" ${draft.interiorCustomFrame ? "checked" : ""} />
-            Egyedi tok centiméteres felárral
-          </label>
-        </div>
-        ${draft.interiorCustomFrame ? `
+    <div class="configurator-flow">
+      <section class="configurator-section">
+        ${configuratorSectionHead(1, "Hely és termékcsalád", "Pozíció, helyiség és beltéri ajtó tétel azonosítása.")}
+        <div class="form-grid">
+          ${quoteItemMetaFields(draft)}
           <div class="field">
-            <label>Tényleges tokvastagság (cm)</label>
-            <input type="number" min="1" step="0.5" data-bind-item="interiorFrameDepthCm" value="${esc(draft.interiorFrameDepthCm)}" />
+            <label>Nyílászáró típus</label>
+            <select data-bind-item="productTypeId">
+              ${productTypes.map((item) => `<option value="${item.id}" ${item.id === draft.productTypeId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
           </div>
           <div class="field">
-            <label>Alapáras határ</label>
-            <input readonly value="${esc(interiorIncludedFrameCm(model, draft.interiorFinish))} cm-ig alapáras" />
+            <label>Gyártó</label>
+            <select data-bind-item="interiorManufacturerId">
+              ${catalog.manufacturers.map((item) => `<option value="${item.id}" ${item.id === draft.interiorManufacturerId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
           </div>
-        ` : renderInteriorFrameSelect(catalog, draft)}
-      ` : renderInteriorFrameSelect(catalog, draft)}
-      <div class="field">
-        <label>4. tétel: kilincs típusa</label>
-        <select data-bind-item="interiorHandleId">
-          ${catalog.handles.map((item) => `<option value="${item.id}" ${item.id === draft.interiorHandleId ? "selected" : ""}>${esc(item.name)} · ${money(item.price)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>5. tétel: zár típusa</label>
-        <select data-bind-item="interiorLockId">
-          ${catalog.locks.map((item) => `<option value="${item.id}" ${item.id === draft.interiorLockId ? "selected" : ""}>${esc(item.name)} · ${money(item.price)}</option>`).join("")}
-        </select>
-      </div>
-      ${manufacturer?.sizing === "standard" ? `
-        <div class="field">
-          <label>Standard méret</label>
-          <select data-bind-item="interiorSizeId">
-            ${sizes.map((item) => `<option value="${item.id}" ${item.id === draft.interiorSizeId ? "selected" : ""}>${esc(item.label)}</option>`).join("")}
-          </select>
         </div>
-        <div class="field">
-          <label>Mennyiség</label>
-          <input type="number" min="1" step="1" data-bind-item="quantity" value="${esc(draft.quantity)}" />
+      </section>
+
+      <section class="configurator-section">
+        ${configuratorSectionHead(2, "Modell, kivitel és szín", "Dekor/CPL ár, ajtómodell és választható szín.")}
+        <div class="form-grid">
+          <div class="field">
+            <label>1. tétel: kivitel</label>
+            <select data-bind-item="interiorFinish">
+              ${interiorFinishOptions.map((item) => `<option value="${item.id}" ${item.id === draft.interiorFinish ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>2. tétel: ajtó modell</label>
+            <select data-bind-item="interiorModelId">
+              ${models.map((item) => `<option value="${item.id}" ${item.id === draft.interiorModelId ? "selected" : ""}>${esc(item.name)} · Dekor ${money(item.decorPrice)} / CPL ${money(item.cplPrice)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>Szín</label>
+            <select data-bind-item="interiorColorId">
+              ${catalog.colors.map((item) => `<option value="${item.id}" ${item.id === draft.interiorColorId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>Árazási mód</label>
+            <input readonly value="${manufacturer?.sizing === "standard" ? "Standard méretű ajtó" : "Egyedi méret, fix modellár"}" />
+          </div>
         </div>
-      ` : dimensionFields(draft)}
-      <div class="field">
-        <label>Beépítés</label>
-        <select data-bind-item="installId">
-          <option value="">Nincs</option>
-          ${accessoriesBy("install").map((item) => `<option value="${item.id}" ${item.id === draft.installId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>Árazási mód</label>
-        <input readonly value="${manufacturer?.sizing === "standard" ? "Standard méretű ajtó" : "Egyedi méret, fix modellár"}" />
-      </div>
-      ${noteField(draft)}
+      </section>
+
+      <section class="configurator-section">
+        ${configuratorSectionHead(3, "Tok, kilincs és zár", "Tokvastagság, vasalat és zártípus felárak.")}
+        <div class="form-grid">
+          ${manufacturer?.sizing === "custom" && model?.customFrameEnabled ? `
+            <div class="field full">
+              <span class="field-label">3. tétel: tokvastagság</span>
+              <label class="check" style="width: max-content;">
+                <input type="checkbox" data-bool-item="interiorCustomFrame" ${draft.interiorCustomFrame ? "checked" : ""} />
+                Egyedi tok centiméteres felárral
+              </label>
+            </div>
+            ${draft.interiorCustomFrame ? `
+              <div class="field">
+                <label>Tényleges tokvastagság (cm)</label>
+                <input type="number" min="1" step="0.5" data-bind-item="interiorFrameDepthCm" value="${esc(draft.interiorFrameDepthCm)}" />
+              </div>
+              <div class="field">
+                <label>Alapáras határ</label>
+                <input readonly value="${esc(interiorIncludedFrameCm(model, draft.interiorFinish))} cm-ig alapáras" />
+              </div>
+            ` : renderInteriorFrameSelect(catalog, draft)}
+          ` : renderInteriorFrameSelect(catalog, draft)}
+          <div class="field">
+            <label>4. tétel: kilincs típusa</label>
+            <select data-bind-item="interiorHandleId">
+              ${catalog.handles.map((item) => `<option value="${item.id}" ${item.id === draft.interiorHandleId ? "selected" : ""}>${esc(item.name)} · ${money(item.price)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label>5. tétel: zár típusa</label>
+            <select data-bind-item="interiorLockId">
+              ${catalog.locks.map((item) => `<option value="${item.id}" ${item.id === draft.interiorLockId ? "selected" : ""}>${esc(item.name)} · ${money(item.price)}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="configurator-section">
+        ${configuratorSectionHead(4, "Méret, beépítés és megjegyzés", "Standard vagy egyedi méret, darabszám és kivitelezési tétel.")}
+        <div class="form-grid">
+          ${manufacturer?.sizing === "standard" ? `
+            <div class="field">
+              <label>Standard méret</label>
+              <select data-bind-item="interiorSizeId">
+                ${sizes.map((item) => `<option value="${item.id}" ${item.id === draft.interiorSizeId ? "selected" : ""}>${esc(item.label)}</option>`).join("")}
+              </select>
+            </div>
+            <div class="field">
+              <label>Mennyiség</label>
+              <input type="number" min="1" step="1" data-bind-item="quantity" value="${esc(draft.quantity)}" />
+            </div>
+          ` : dimensionFields(draft)}
+          <div class="field">
+            <label>Beépítés</label>
+            <select data-bind-item="installId">
+              <option value="">Nincs</option>
+              ${accessoriesBy("install").map((item) => `<option value="${item.id}" ${item.id === draft.installId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+            </select>
+          </div>
+          ${noteField(draft)}
+        </div>
+      </section>
     </div>
   `;
 }

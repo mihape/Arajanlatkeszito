@@ -536,6 +536,140 @@ button {
   white-space: nowrap;
 }
 
+.configurator-workflow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbfb;
+  overflow: hidden;
+}
+
+.workflow-step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  padding: 10px;
+  border-right: 1px solid var(--line);
+}
+
+.workflow-step:last-child {
+  border-right: 0;
+}
+
+.workflow-step-index,
+.configurator-section-index {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--teal-2);
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.workflow-step strong,
+.configurator-section-head strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.workflow-step small,
+.workflow-step em,
+.configurator-section-head small,
+.calculation-strip span,
+.calculation-strip small {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 720;
+  line-height: 1.25;
+}
+
+.workflow-step em {
+  grid-column: 2;
+  color: var(--teal);
+}
+
+.workflow-step.missing .workflow-step-index,
+.workflow-step.warning .workflow-step-index {
+  background: var(--amber-2);
+  color: #8a560d;
+}
+
+.workflow-step.warning em,
+.workflow-step.missing em {
+  color: #8a560d;
+}
+
+.calculation-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.calculation-strip > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  background: #fff;
+}
+
+.calculation-strip strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calculation-strip .warning {
+  background: var(--amber-2);
+}
+
+.calculation-strip .warning strong {
+  color: #8a560d;
+}
+
+.configurator-flow {
+  display: grid;
+  gap: 0;
+}
+
+.configurator-section {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.configurator-section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.configurator-section:last-child {
+  padding-bottom: 0;
+}
+
+.configurator-section-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1537,8 +1671,19 @@ tr.selectable.active td:first-child {
   .presentation-item-grid,
   .setup-steps,
   .catalog-overview,
-  .catalog-overview-metrics {
+  .catalog-overview-metrics,
+  .configurator-workflow,
+  .calculation-strip {
     grid-template-columns: 1fr;
+  }
+
+  .workflow-step {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .workflow-step:last-child {
+    border-bottom: 0;
   }
 
   .dashboard-hero {
