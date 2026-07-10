@@ -867,8 +867,8 @@ function getViewMeta() {
       <button class="button" data-action="set-quote-status" data-status="Elküldve">${icon("send")}Elküldve</button>
       <button class="button" data-action="set-quote-status" data-status="Elfogadva">${icon("check")}Elfogadva</button>
       <button class="button danger" data-action="set-quote-status" data-status="Elutasítva">${icon("x")}Elutasítva</button>
-      <button class="button primary" data-action="print-quote" data-print-mode="customer">${icon("print")}Ügyfél PDF</button>
-      <button class="button" data-action="print-quote" data-print-mode="internal">${icon("print")}Belső PDF</button>
+      <button class="button primary" data-action="print-quote" data-print-mode="customer">${icon("print")}Ügyfél PDF (küldhető)</button>
+      <button class="button warning" data-action="print-quote" data-print-mode="internal">${icon("print")}Belső PDF (beszerzés)</button>
     `,
     customers: `<button class="button primary" data-action="new-customer">${icon("plus")}Új ügyfél</button>`,
     profiles: `<button class="button primary" data-action="new-profile">${icon("plus")}Új műanyag profil</button>`,
@@ -981,6 +981,8 @@ function renderQuotesView(quote) {
           </div>
         </section>
 
+        ${renderPdfExportPanel(quote)}
+
         <section class="panel">
           <div class="panel-header">
             <div>
@@ -1004,6 +1006,36 @@ function renderQuotesView(quote) {
         ${renderPresentationPreview(quote, totals)}
       </aside>
     </div>
+  `;
+}
+
+function renderPdfExportPanel(quote) {
+  return `
+    <section class="panel pdf-export-panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">PDF export</h2>
+          <p class="panel-note">Válaszd külön az ügyfélnek küldhető és a belső kalkulációs PDF-et.</p>
+        </div>
+      </div>
+      <div class="panel-body pdf-export-actions">
+        <button class="button primary" data-action="print-quote" data-print-mode="customer">
+          ${icon("print")}
+          <span>
+            <strong>Biztonságos ügyfél PDF</strong>
+            <small>Beszerzés, haszon és fedezet nélkül</small>
+          </span>
+        </button>
+        <button class="button warning" data-action="print-quote" data-print-mode="internal">
+          ${icon("print")}
+          <span>
+            <strong>Belső PDF beszerzéssel</strong>
+            <small>Beszerzési ár, haszon és fedezet látszik</small>
+          </span>
+        </button>
+        ${!quote.items.length ? `<div class="warning-box">${icon("alert")}PDF előtt érdemes legalább egy tételt hozzáadni.</div>` : ""}
+      </div>
+    </section>
   `;
 }
 
@@ -1351,8 +1383,8 @@ function renderDashboardQuoteRow(quote) {
       <td>
         <div class="row-actions">
           <button class="button" data-action="select-quote" data-id="${quote.id}">${icon("edit")}Megnyitás</button>
-          <button class="button" data-action="dashboard-print-quote" data-id="${quote.id}" data-print-mode="customer">${icon("print")}PDF</button>
-          <button class="button" data-action="dashboard-print-quote" data-id="${quote.id}" data-print-mode="internal">${icon("print")}Belső</button>
+          <button class="button" data-action="dashboard-print-quote" data-id="${quote.id}" data-print-mode="customer">${icon("print")}Ügyfél PDF</button>
+          <button class="button warning" data-action="dashboard-print-quote" data-id="${quote.id}" data-print-mode="internal">${icon("print")}Belső PDF</button>
           <button class="button" data-action="set-quote-status" data-id="${quote.id}" data-status="Elküldve">${icon("send")}Elküldve</button>
           <button class="button" data-action="set-quote-status" data-id="${quote.id}" data-status="Elfogadva">${icon("check")}Elfogad</button>
           <button class="button" data-action="set-quote-status" data-id="${quote.id}" data-status="Elutasítva">${icon("x")}Elutasít</button>
