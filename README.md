@@ -81,6 +81,10 @@ Use the RC guide when validating a Windows build:
 
 The expected first-run release experience is an empty, usable app with clear setup direction, not a pre-filled demo system.
 
+Latest RC:
+
+- [v0.1.0-rc4](https://github.com/mihape/Arajanlatkeszito/releases/tag/v0.1.0-rc4)
+
 ## Hungarian Summary
 
 Ez egy helyi Windows ajanlatkeszito app nyilaszarokhoz. A jelenlegi verzio mar Electron szerkezetben fut, es kesobb SQLite adatbazissal, stabil PDF exporttal, GitHub release folyamattal es CRM-integracios adapterekkel kell tovabbvinni.

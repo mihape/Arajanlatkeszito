@@ -259,6 +259,53 @@ Result:
 - Current repository content is public-repo safe based on tracked files and Git history file-name checks.
 - Final #1 release gate should remain open until the actual first tagged release is prepared and reviewed one more time.
 
+## 2026-07-10 RC4 Windows validation and user smoke
+
+Release:
+
+- `v0.1.0-rc4`
+- https://github.com/mihape/Arajanlatkeszito/releases/tag/v0.1.0-rc4
+
+Workflow:
+
+- GitHub Actions `Build Windows` run `29077407834`
+- Result: success
+
+Automated validation:
+
+- `npm run check` passed locally before tagging.
+- `npm audit --audit-level=moderate` reported 0 vulnerabilities.
+- Windows workflow passed:
+  - Electron release smoke
+  - Electron demo smoke
+  - Windows installer build
+  - packaged release app smoke
+  - silent installed app smoke
+  - installed app PDF export smoke
+  - installed app backup/restart smoke
+  - checksum generation
+  - artifact and release asset upload
+
+Release assets:
+
+- `Nyilaszaro.Ajanlatkeszito.Setup.0.1.0.exe`
+- `CHECKSUMS.txt`
+
+Manual Windows observation from the owner:
+
+- installer completed successfully
+- installed app starts and works
+- customer creation works
+- customer data persists after restart
+- quote creation works
+- quote item creation works
+- quote and item data persist after restart
+
+Result:
+
+- #15 manual Windows installer/runtime validation is considered complete for the current RC scope.
+- Remaining PDF/layout and UX refinements should be tracked as product follow-up issues, not as release-blocking installer validation.
+
 ## 2026-07-07 Windows validation helper
 
 Implemented:
