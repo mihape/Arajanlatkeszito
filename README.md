@@ -83,7 +83,7 @@ The expected first-run release experience is an empty, usable app with clear set
 
 Latest RC:
 
-- [v0.1.0-rc4](https://github.com/mihape/Arajanlatkeszito/releases/tag/v0.1.0-rc4)
+- [v0.1.0-rc5](https://github.com/mihape/Arajanlatkeszito/releases/tag/v0.1.0-rc5)
 
 ## Hungarian Summary
 
