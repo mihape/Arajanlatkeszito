@@ -20,6 +20,15 @@ const productTypes = [
 
 const matrixProductTypes = productTypes.filter((type) => type.id !== "interior-door");
 
+const quoteSections = [
+  { id: "openings", name: "Nyílászárók" },
+  { id: "interior-doors", name: "Beltéri ajtók" },
+  { id: "shutters", name: "Redőnyök" },
+  { id: "mosquito-screens", name: "Szúnyoghálók" },
+  { id: "installation", name: "Beépítés" },
+  { id: "other", name: "Egyéb tételek" }
+];
+
 const interiorFinishOptions = [
   { id: "decor", name: "Dekor ajtó", priceField: "decorPrice" },
   { id: "cpl", name: "CPL ajtó", priceField: "cplPrice" }
@@ -671,6 +680,7 @@ function createDefaultItem(currentState = state) {
     quantity: 1,
     room: "",
     position: "",
+    sectionId: "openings",
     colorId: currentState.catalog.colors[0]?.id || "",
     colorMode: "outside",
     glassId: currentState.catalog.glasses[0]?.id || "",
@@ -1661,6 +1671,12 @@ function dimensionFields(draft) {
 function quoteItemMetaFields(draft) {
   return `
     <div class="field">
+      <label>Szekció</label>
+      <select data-bind-item="sectionId">
+        ${quoteSections.map((section) => `<option value="${section.id}" ${section.id === (draft.sectionId || defaultSectionIdForItem(draft)) ? "selected" : ""}>${esc(section.name)}</option>`).join("")}
+      </select>
+    </div>
+    <div class="field">
       <label>Helyiség</label>
       <input data-bind-item="room" value="${esc(draft.room)}" placeholder="pl. Nappali" />
     </div>
@@ -1726,6 +1742,7 @@ function renderItemsTable(quote) {
       </section>
     `;
   }
+  const groupedItems = groupQuoteItems(quote.items, quote);
   return `
     <section class="panel">
       <div class="panel-header">
@@ -1747,31 +1764,44 @@ function renderItemsTable(quote) {
             </tr>
           </thead>
           <tbody>
-            ${quote.items.map((item) => {
-              const calc = calcItem(item, quote);
-              const isActive = ui.selectedItemId === item.id;
-              return `
-                <tr class="selectable ${isActive ? "active" : ""}" data-action="select-item" data-id="${item.id}">
-                  <td>
-                    <strong>${esc(itemTitle(item))}</strong>
-                    ${isActive ? `<span class="item-active-label">Aktív</span>` : ""}<br />
-                    <span class="panel-note">${esc(itemSubtitle(item))} · ${number(item.quantity)} db</span>
-                    ${itemMetaText(item) ? `<br /><span class="panel-note">${esc(itemMetaText(item))}</span>` : ""}
-                  </td>
-                  <td>${number(item.width)} x ${number(item.height)} mm</td>
-                  <td>
-                    <div class="tag-row">${itemOptionTags(item)}</div>
-                  </td>
-                  <td class="numeric internal-only">${money(calc.cost)}</td>
-                  <td class="numeric">${money(calc.net)}</td>
-                  <td class="numeric"><strong>${money(calc.gross)}</strong></td>
-                </tr>
-              `;
-            }).join("")}
+            ${groupedItems.map((group) => `
+              <tr class="section-row">
+                <td colspan="3">
+                  <strong>${esc(group.name)}</strong>
+                  <span>${number(group.items.length)} tétel</span>
+                </td>
+                <td class="numeric internal-only">${money(group.totals.cost)}</td>
+                <td class="numeric">${money(group.totals.net)}</td>
+                <td class="numeric"><strong>${money(group.totals.gross)}</strong></td>
+              </tr>
+              ${group.items.map((item) => renderItemTableRow(item, quote)).join("")}
+            `).join("")}
           </tbody>
         </table>
       </div>
     </section>
+  `;
+}
+
+function renderItemTableRow(item, quote) {
+  const calc = calcItem(item, quote);
+  const isActive = ui.selectedItemId === item.id;
+  return `
+    <tr class="selectable ${isActive ? "active" : ""}" data-action="select-item" data-id="${item.id}">
+      <td>
+        <strong>${esc(itemTitle(item))}</strong>
+        ${isActive ? `<span class="item-active-label">Aktív</span>` : ""}<br />
+        <span class="panel-note">${esc(itemSubtitle(item))} · ${number(item.quantity)} db</span>
+        ${itemMetaText(item) ? `<br /><span class="panel-note">${esc(itemMetaText(item))}</span>` : ""}
+      </td>
+      <td>${number(item.width)} x ${number(item.height)} mm</td>
+      <td>
+        <div class="tag-row">${itemOptionTags(item)}</div>
+      </td>
+      <td class="numeric internal-only">${money(calc.cost)}</td>
+      <td class="numeric">${money(calc.net)}</td>
+      <td class="numeric"><strong>${money(calc.gross)}</strong></td>
+    </tr>
   `;
 }
 
@@ -2663,6 +2693,8 @@ function renderPrintSheet(quote) {
   const totals = calcQuote(quote);
   const validUntil = addDays(quote.createdAt, Number(state.settings.validityDays || 15));
   const internalPrint = ui.printMode === "internal";
+  const groupedItems = groupQuoteItems(quote.items, quote);
+  let printItemIndex = 0;
   return `
     <article class="print-sheet ${internalPrint ? "print-internal-sheet" : "print-customer-sheet"}">
       <header class="print-header">
@@ -2691,29 +2723,13 @@ function renderPrintSheet(quote) {
 
       <section class="print-section">
         <h2>Tételek</h2>
-        ${quote.items.map((item, index) => {
-          const calc = calcItem(item, quote);
-          const profile = getProfile(item.profileId);
-          const image = item.productTypeId === "interior-door" ? getInteriorDoorImage(item) : state.openingImages?.[item.openingTypeId];
-          return `
-            <div class="print-item">
-              <div>${image ? `<img src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height, true)}</div>
-              <div>
-                <strong>${index + 1}. ${esc(itemTitle(item))}</strong><br />
-                ${itemMetaText(item) ? `${esc(itemMetaText(item))}<br />` : ""}
-                ${item.productTypeId === "interior-door" ? esc(interiorPrintDetails(item)) : `${esc(profile?.manufacturer || "")} · ${esc(profile?.name || "")}`}<br />
-                Méret: ${number(item.width)} x ${number(item.height)} mm · Mennyiség: ${number(item.quantity)} db<br />
-                ${item.productTypeId === "interior-door"
-                  ? `${esc(interiorPrintOptions(item))}<br />`
-                  : `Szín: ${esc(colorName(item.colorId))} (${esc(colorModeName(item.colorMode))}) · Üvegezés: ${esc(glassName(item.glassId))} · ${esc(formatThermalInfo(item))}<br />`}
-                ${item.productTypeId !== "interior-door" && item.extensionMm ? `Toktoldó: ${esc(item.extensionMm)} mm, ${esc(item.extensionPlacement)}<br />` : ""}
-                ${accessoryLine(item, quote, calc)}
-                <span class="internal-only">Beszerzés: ${money(calc.cost)} · Fedezet: ${money(calc.net - calc.cost)}<br /></span>
-                <strong>Nettó ár: ${money(calc.net)}</strong>
-              </div>
-            </div>
-          `;
-        }).join("")}
+        ${groupedItems.map((group) => `
+          <div class="print-subsection">
+            <strong>${esc(group.name)}</strong>
+            <span>Nettó: ${money(group.totals.net)} · Bruttó: ${money(group.totals.gross)}</span>
+          </div>
+          ${group.items.map((item) => renderPrintItem(item, quote, printItemIndex++)).join("")}
+        `).join("")}
         <div class="print-total" style="display: grid; gap: 6px; justify-content: end;">
           <div class="internal-only">Beszerzés összesen: ${money(totals.cost)}</div>
           <div class="internal-only">Haszonkulcs: ${number(quote.margin ?? state.settings.defaultMargin)}%</div>
@@ -2725,6 +2741,30 @@ function renderPrintSheet(quote) {
         <p>${esc(state.settings.paymentNote)}</p>
       </section>
     </article>
+  `;
+}
+
+function renderPrintItem(item, quote, index) {
+  const calc = calcItem(item, quote);
+  const profile = getProfile(item.profileId);
+  const image = item.productTypeId === "interior-door" ? getInteriorDoorImage(item) : state.openingImages?.[item.openingTypeId];
+  return `
+    <div class="print-item">
+      <div>${image ? `<img src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height, true)}</div>
+      <div>
+        <strong>${index + 1}. ${esc(itemTitle(item))}</strong><br />
+        ${itemMetaText(item) ? `${esc(itemMetaText(item))}<br />` : ""}
+        ${item.productTypeId === "interior-door" ? esc(interiorPrintDetails(item)) : `${esc(profile?.manufacturer || "")} · ${esc(profile?.name || "")}`}<br />
+        Méret: ${number(item.width)} x ${number(item.height)} mm · Mennyiség: ${number(item.quantity)} db<br />
+        ${item.productTypeId === "interior-door"
+          ? `${esc(interiorPrintOptions(item))}<br />`
+          : `Szín: ${esc(colorName(item.colorId))} (${esc(colorModeName(item.colorMode))}) · Üvegezés: ${esc(glassName(item.glassId))} · ${esc(formatThermalInfo(item))}<br />`}
+        ${item.productTypeId !== "interior-door" && item.extensionMm ? `Toktoldó: ${esc(item.extensionMm)} mm, ${esc(item.extensionPlacement)}<br />` : ""}
+        ${accessoryLine(item, quote, calc)}
+        <span class="internal-only">Beszerzés: ${money(calc.cost)} · Fedezet: ${money(calc.net - calc.cost)}<br /></span>
+        <strong>Nettó ár: ${money(calc.net)}</strong>
+      </div>
+    </div>
   `;
 }
 
@@ -3166,6 +3206,7 @@ function normalizeItem(item) {
     quantity: Math.max(1, Number(item.quantity || 1)),
     room: String(item.room || "").trim(),
     position: String(item.position || "").trim(),
+    sectionId: quoteSections.some((section) => section.id === item.sectionId) ? item.sectionId : defaultSectionIdForItem(item),
     colorMode: item.colorMode || "outside",
     interiorCustomFrame: Boolean(item.interiorCustomFrame),
     interiorFrameDepthCm: Number(item.interiorFrameDepthCm || 12),
@@ -3877,9 +3918,33 @@ function itemMetaText(item) {
   return parts.join(" · ");
 }
 
+function defaultSectionIdForItem(item) {
+  if (item.sectionId && quoteSections.some((section) => section.id === item.sectionId)) return item.sectionId;
+  if (item.productTypeId === "interior-door") return "interior-doors";
+  return "openings";
+}
+
+function sectionName(sectionId) {
+  return quoteSections.find((section) => section.id === sectionId)?.name || quoteSections[0].name;
+}
+
+function groupQuoteItems(items, quote) {
+  const groups = quoteSections
+    .map((section) => ({
+      ...section,
+      items: items.filter((item) => defaultSectionIdForItem(item) === section.id)
+    }))
+    .filter((group) => group.items.length);
+  return groups.map((group) => ({
+    ...group,
+    totals: pricing.summarizeQuote(group.items.map((item) => calcItem(item, quote)))
+  }));
+}
+
 function itemOptionTags(item) {
   if (item.productTypeId === "interior-door") {
     return [
+      sectionName(defaultSectionIdForItem(item)),
       interiorColor(item.interiorColorId)?.name,
       item.interiorCustomFrame ? `Egyedi tok ${number(item.interiorFrameDepthCm)} cm` : interiorFrame(item.interiorFrameId)?.name,
       interiorHandle(item.interiorHandleId)?.name,
@@ -3887,6 +3952,7 @@ function itemOptionTags(item) {
     ].filter(Boolean).map((label) => `<span class="tag">${esc(label)}</span>`).join("");
   }
   return `
+    <span class="tag">${esc(sectionName(defaultSectionIdForItem(item)))}</span>
     <span class="tag">${esc(colorName(item.colorId))}</span>
     <span class="tag">${esc(colorModeName(item.colorMode))}</span>
     <span class="tag">${esc(glassName(item.glassId))}</span>

@@ -687,6 +687,21 @@ tr.selectable.active td {
   background: #f3fbfa;
 }
 
+.section-row td {
+  border-top: 1px solid var(--line-strong);
+  border-bottom-color: var(--line-strong);
+  background: #fbf8f1;
+  color: #5a4323;
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.section-row span {
+  margin-left: 8px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 tr.selectable.active td:first-child {
   box-shadow: inset 4px 0 0 var(--teal);
 }
@@ -1491,6 +1506,24 @@ tr.selectable.active td:first-child {
     width: 120px;
     height: 90px;
     object-fit: contain;
+  }
+
+  .print-subsection {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 16px 0 8px;
+    padding: 8px 10px;
+    border: 1px solid #e5ded0;
+    border-radius: 8px;
+    background: #fbf8f1;
+    color: #4d3b20;
+    font-size: 12px;
+  }
+
+  .print-subsection span {
+    color: #69583a;
   }
 
   .print-total {
