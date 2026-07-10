@@ -669,6 +669,8 @@ function createDefaultItem(currentState = state) {
     width: 1200,
     height: 1500,
     quantity: 1,
+    room: "",
+    position: "",
     colorId: currentState.catalog.colors[0]?.id || "",
     colorMode: "outside",
     glassId: currentState.catalog.glasses[0]?.id || "",
@@ -1436,6 +1438,7 @@ function renderItemEditor(quote, draftCalc) {
 function renderExteriorItemFields(draft) {
   return `
     <div class="form-grid">
+      ${quoteItemMetaFields(draft)}
       <div class="field">
         <label>Nyílászáró típus</label>
         <select data-bind-item="productTypeId">
@@ -1548,6 +1551,7 @@ function renderInteriorItemFields(draft) {
   const sizes = parseInteriorSizes(manufacturer?.sizesText || "");
   return `
     <div class="form-grid">
+      ${quoteItemMetaFields(draft)}
       <div class="field">
         <label>Nyílászáró típus</label>
         <select data-bind-item="productTypeId">
@@ -1654,6 +1658,19 @@ function dimensionFields(draft) {
   `;
 }
 
+function quoteItemMetaFields(draft) {
+  return `
+    <div class="field">
+      <label>Helyiség</label>
+      <input data-bind-item="room" value="${esc(draft.room)}" placeholder="pl. Nappali" />
+    </div>
+    <div class="field">
+      <label>Pozíció / jel</label>
+      <input data-bind-item="position" value="${esc(draft.position)}" placeholder="pl. A-01" />
+    </div>
+  `;
+}
+
 function renderInteriorFrameSelect(catalog, draft) {
   return `
     <div class="field">
@@ -1739,6 +1756,7 @@ function renderItemsTable(quote) {
                     <strong>${esc(itemTitle(item))}</strong>
                     ${isActive ? `<span class="item-active-label">Aktív</span>` : ""}<br />
                     <span class="panel-note">${esc(itemSubtitle(item))} · ${number(item.quantity)} db</span>
+                    ${itemMetaText(item) ? `<br /><span class="panel-note">${esc(itemMetaText(item))}</span>` : ""}
                   </td>
                   <td>${number(item.width)} x ${number(item.height)} mm</td>
                   <td>
@@ -2682,6 +2700,7 @@ function renderPrintSheet(quote) {
               <div>${image ? `<img src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height, true)}</div>
               <div>
                 <strong>${index + 1}. ${esc(itemTitle(item))}</strong><br />
+                ${itemMetaText(item) ? `${esc(itemMetaText(item))}<br />` : ""}
                 ${item.productTypeId === "interior-door" ? esc(interiorPrintDetails(item)) : `${esc(profile?.manufacturer || "")} · ${esc(profile?.name || "")}`}<br />
                 Méret: ${number(item.width)} x ${number(item.height)} mm · Mennyiség: ${number(item.quantity)} db<br />
                 ${item.productTypeId === "interior-door"
@@ -3145,6 +3164,8 @@ function normalizeItem(item) {
     width: Number(item.width || 0),
     height: Number(item.height || 0),
     quantity: Math.max(1, Number(item.quantity || 1)),
+    room: String(item.room || "").trim(),
+    position: String(item.position || "").trim(),
     colorMode: item.colorMode || "outside",
     interiorCustomFrame: Boolean(item.interiorCustomFrame),
     interiorFrameDepthCm: Number(item.interiorFrameDepthCm || 12),
@@ -3847,6 +3868,13 @@ function itemSubtitle(item) {
   }
   const profile = getProfile(item.profileId);
   return `${profile?.manufacturer || ""} · ${profile?.name || ""}`;
+}
+
+function itemMetaText(item) {
+  const parts = [];
+  if (item.room) parts.push(`Helyiség: ${item.room}`);
+  if (item.position) parts.push(`Pozíció: ${item.position}`);
+  return parts.join(" · ");
 }
 
 function itemOptionTags(item) {

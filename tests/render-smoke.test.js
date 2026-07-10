@@ -149,6 +149,15 @@ test("quote editor renders overview and active item cues", () => {
   assert(html.includes("Prezentációs előnézet"));
   assert(html.includes("Beszerzési ár nélkül"));
   assert(html.includes("Fizetendő bruttó"));
+  assert(html.includes("data-bind-item=\"room\""));
+  assert(html.includes("data-bind-item=\"position\""));
   assert(html.includes("Aktív"));
   assert(html.includes("Szerkesztés alatt"));
+});
+
+test("quote items render room and position metadata", () => {
+  const html = renderApp("?mode=demo", "state.quotes[0].items[0].room = 'Nappali'; state.quotes[0].items[0].position = 'A-01'; ui.view = 'quote-editor'; ui.selectedItemId = state.quotes[0].items[0].id; ui.itemDraft = normalizeItem(state.quotes[0].items[0]); render();");
+
+  assert(html.includes("Helyiség: Nappali"));
+  assert(html.includes("Pozíció: A-01"));
 });
