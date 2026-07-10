@@ -77,6 +77,7 @@ let ui = {
   quoteDeadlineFilter: "",
   quoteSearch: "",
   matrixImportReport: null,
+  customerPresentationMode: false,
   itemDraft: createDefaultItem(state),
   customerDraft: createCustomerDraft(),
   profileDraft: createProfileDraft(),
@@ -863,6 +864,7 @@ function getViewMeta() {
     `,
     "quote-editor": `
       <button class="button" data-action="open-dashboard">${icon("grid")}Dashboard</button>
+      <button class="button ${ui.customerPresentationMode ? "primary" : ""}" data-action="toggle-customer-view">${icon("eye")}${ui.customerPresentationMode ? "Szerkesztő nézet" : "Ügyfél nézet"}</button>
       <button class="button" data-action="duplicate-quote">${icon("copy")}Másolás</button>
       <button class="button" data-action="set-quote-status" data-status="Elküldve">${icon("send")}Elküldve</button>
       <button class="button" data-action="set-quote-status" data-status="Elfogadva">${icon("check")}Elfogadva</button>
@@ -915,6 +917,7 @@ function renderQuotesView(quote) {
   const customer = getCustomer(quote.customerId);
   const draftCalc = calcItem(ui.itemDraft, quote);
   const totals = calcQuote(quote);
+  if (ui.customerPresentationMode) return renderCustomerPresentationMode(quote, customer, totals);
   return `
     <div class="quote-workspace">
       <div class="workspace-main">
@@ -1006,6 +1009,66 @@ function renderQuotesView(quote) {
         ${renderPresentationPreview(quote, totals)}
       </aside>
     </div>
+  `;
+}
+
+function renderCustomerPresentationMode(quote, customer, totals) {
+  const groupedItems = groupQuoteItems(quote.items, quote);
+  return `
+    <div class="customer-presentation-mode">
+      <section class="customer-presentation-hero">
+        <div>
+          <span>Ügyfélprezentáció</span>
+          <h2>${esc(customer?.name || "Ügyfél")} · ${esc(quote.number)}</h2>
+          <p>${esc(quote.projectAddress || customer?.address || "")}</p>
+        </div>
+        <div class="customer-presentation-total">
+          <span>Fizetendő bruttó</span>
+          <strong>${money(totals.gross)}</strong>
+          <small>Nettó ${money(totals.net)} · ÁFA ${money(totals.vatAmount)}</small>
+        </div>
+      </section>
+
+      ${groupedItems.map((group) => `
+        <section class="presentation-section">
+          <div class="presentation-section-header">
+            <h3>${esc(group.name)}</h3>
+            <span>Nettó ${money(group.totals.net)} · Bruttó ${money(group.totals.gross)}</span>
+          </div>
+          <div class="presentation-item-grid">
+            ${group.items.map((item) => renderPresentationItemCard(item, quote)).join("")}
+          </div>
+        </section>
+      `).join("")}
+
+      <section class="panel flat">
+        <div class="panel-body presentation-disclaimer">
+          <strong>Ügyfélnek szánt nézet</strong>
+          <span>Csak eladási árak, ÁFA és bruttó összesítők látszanak. Beszerzési ár, haszon és fedezet nem jelenik meg.</span>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderPresentationItemCard(item, quote) {
+  const calc = calcItem(item, quote);
+  const image = item.productTypeId === "interior-door" ? getInteriorDoorImage(item) : state.openingImages?.[item.openingTypeId];
+  return `
+    <article class="presentation-item-card">
+      <div class="presentation-item-visual">
+        ${image ? `<img class="preview-image" src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height)}
+      </div>
+      <div class="presentation-item-copy">
+        <strong>${esc(itemTitle(item))}</strong>
+        <span>${itemMetaText(item) ? `${esc(itemMetaText(item))} · ` : ""}${number(item.width)} x ${number(item.height)} mm · ${number(item.quantity)} db</span>
+      </div>
+      <div class="presentation-item-price">
+        <span>Nettó</span>
+        <strong>${money(calc.net)}</strong>
+        <small>Bruttó ${money(calc.gross)}</small>
+      </div>
+    </article>
   `;
 }
 
@@ -2804,6 +2867,7 @@ function handleClick(event) {
   const viewButton = event.target.closest("[data-view]");
   if (viewButton) {
     ui.view = viewButton.dataset.view;
+    ui.customerPresentationMode = false;
     render();
     return;
   }
@@ -2820,6 +2884,7 @@ function handleClick(event) {
   if (action === "print-quote") printQuote(ui.selectedQuoteId, actionButton.dataset.printMode || "customer");
   if (action === "dashboard-print-quote") printQuote(id, actionButton.dataset.printMode || "customer");
   if (action === "open-dashboard") openDashboard();
+  if (action === "toggle-customer-view") toggleCustomerView();
   if (action === "set-quote-status") setQuoteStatus(id || ui.selectedQuoteId, actionButton.dataset.status);
   if (action === "delete-quote") deleteQuote(id);
   if (action === "save-item") saveItem();
@@ -3060,6 +3125,7 @@ function selectQuote(id) {
   ui.selectedQuoteId = id;
   ui.view = "quote-editor";
   ui.selectedItemId = "";
+  ui.customerPresentationMode = false;
   ui.itemDraft = createDefaultItem(state);
   render();
 }
@@ -3067,6 +3133,12 @@ function selectQuote(id) {
 function openDashboard() {
   ui.view = "quotes";
   ui.selectedItemId = "";
+  ui.customerPresentationMode = false;
+  render();
+}
+
+function toggleCustomerView() {
+  ui.customerPresentationMode = !ui.customerPresentationMode;
   render();
 }
 
@@ -4135,6 +4207,7 @@ function icon(name, className = "button-icon") {
     check: '<path d="M20 6 9 17l-5-5" />',
     x: '<path d="M18 6 6 18" /><path d="m6 6 12 12" />',
     send: '<path d="m22 2-7 20-4-9-9-4 20-7Z" /><path d="M22 2 11 13" />',
+    eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" />',
     print: '<path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6z" />',
     save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" />',
     trash: '<path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6" /><path d="M14 11v6" />',

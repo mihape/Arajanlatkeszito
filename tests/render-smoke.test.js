@@ -154,8 +154,18 @@ test("quote editor renders overview and active item cues", () => {
   assert(html.includes("data-bind-item=\"sectionId\""));
   assert(html.includes("data-bind-item=\"room\""));
   assert(html.includes("data-bind-item=\"position\""));
+  assert(html.includes("Ügyfél nézet"));
   assert(html.includes("Aktív"));
   assert(html.includes("Szerkesztés alatt"));
+});
+
+test("customer presentation mode renders customer-safe quote view", () => {
+  const html = renderApp("?mode=demo", "ui.view = 'quote-editor'; ui.customerPresentationMode = true; render();");
+
+  assert(html.includes("customer-presentation-mode"));
+  assert(html.includes("Ügyfélprezentáció"));
+  assert(html.includes("Ügyfélnek szánt nézet"));
+  assert(html.includes("Fizetendő bruttó"));
 });
 
 test("quote items render room and position metadata", () => {
