@@ -306,6 +306,33 @@ Result:
 - #15 manual Windows installer/runtime validation is considered complete for the current RC scope.
 - Remaining PDF/layout and UX refinements should be tracked as product follow-up issues, not as release-blocking installer validation.
 
+## 2026-07-10 RC field testing and quote workflow polish
+
+Implemented under #28:
+
+- #32: quote item `Helyiseg` and `Pozicio / jel` metadata.
+- #30: quote item sections with editor and PDF grouped subtotals.
+- #29: clearer customer/internal PDF export actions.
+- #33: first customer presentation view MVP.
+- #31: RC testing documentation aligned with the new testing flow.
+
+Validation:
+
+```bash
+npm run check
+```
+
+Result:
+
+- renderer smoke tests cover item metadata, grouped section totals, PDF export labels and customer presentation mode.
+- pricing, SQLite adapter, PDF channel, CRM contract, matrix import and installer helper tests remain green.
+
+Next RC build focus:
+
+- create the next tagged RC after #31 is closed.
+- validate installer startup with existing local test data.
+- manually try: item room/position, sections, customer/internal PDF export, customer view toggle.
+
 ## 2026-07-07 Windows validation helper
 
 Implemented:

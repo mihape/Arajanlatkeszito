@@ -99,24 +99,38 @@ Az RC tesztelesnel ne csak azt ellenorizd, hogy mentheto-e az adat, hanem azt is
 - Hozz letre uj ajanlatot.
 - Allits be AFA-t.
 - Adj hozza legalabb egy nyilaszaros tetelt.
+- A tetelnel toltsd ki a `Helyiseg`, `Pozicio / jel` es `Szekcio` mezoket.
+- Ellenorizd, hogy a tetellistaban a szekcio alcim es reszosszeg megjelenik.
 - Adj hozza egy kiegeszito vagy beepitesi tetelt, ha van feltoltott adat.
 - Ellenorizd a netto, AFA es brutto osszesitot.
 
 ### 4. PDF export
+
+Az ajanlatszerkesztoben a kulon `PDF export` panelbol inditsd az exportot.
 
 Ugyfel PDF:
 
 - csak eladasi arakat mutat
 - netto, AFA es brutto osszesito latszik
 - beszerzesi ar, haszon es fedezet nem latszik
+- a szekcio alcimek es reszosszegek latszanak
+- helyiseg/pozicio jeloles latszik, ha ki van toltve
 
 Belso PDF:
 
 - beszerzesi ar latszik
 - haszon/fedezet latszik
 - netto, AFA es brutto osszesito tovabbra is ellenorizheto
+- a belso PDF gomb egyertelmuen belso/beszerzesi tartalomkent van jelolve
 
-### 5. Ujrainditas es backup
+### 5. Ugyfelnezet / prezentacios MVP
+
+- Az ajanlatszerkesztoben kapcsold be az `Ugyfel nezet` modot.
+- Ellenorizd, hogy ugyfelbarat kartyak, rajzok/kepek es eladasi arak jelennek meg.
+- Ellenorizd, hogy beszerzesi ar, haszon es fedezet nem resze a prezentacios nezetnek.
+- Kapcsold vissza a szerkesztoi nezetet, es ellenorizd, hogy a tetel szerkesztheto marad.
+
+### 6. Ujrainditas es backup
 
 - Zard be az appot.
 - Inditsd ujra.
@@ -127,17 +141,20 @@ Belso PDF:
 
 ## Prezentacios irany elokeszitese
 
-Az RC-ben meg nem teljes ugyfelprezentacios uzemmod keszul, de a felulet es PDF irany mar ezt keszitse elo:
+Az RC-ben mar van elso ugyfelnezet MVP, de ez meg nem a vegleges teljes prezentacios uzemmod. A tovabbi fejlesztes iranya:
 
 - a szerkesztoi/belso nezet valassza szet a beszerzesi es ugyfel arakat
-- a kesobbi prezentacios nezet csak ugyfel arakat mutasson
+- az ugyfelnezet csak ugyfel arakat mutasson
 - a nyilaszaros tetelekhez legyen hely szerkezeti rajz vagy feltoltott tipus kep szamara
 - a PDF ne csak belso kalkulacios tablazatnak hasson, hanem ugyfelnek kuldheto dokumentumnak
 
 ## GitHub issue kapcsolatok
 
-- Epic: #10
-- Windows kezi validacio: #15
-- Publikus repo safety gate: #1
-- RC/UX subissue-k: #18, #20, #21, #19 a #10 Phase 6 alatt.
-- Torzsadat es arlista feltoltesi UX epic: #22
+- Lezart production roadmap epic: #10
+- Lezart torzsadat es arlista feltoltesi UX epic: #22
+- Aktualis RC terepi teszteles es workflow polish epic: #28
+- Helyiseg/pozicio mezok: #32
+- Tetel szekciok es reszosszegek: #30
+- PDF export UX: #29
+- Ugyfelprezentacios MVP: #33
+- RC tesztelesi dokumentacio: #31
