@@ -153,6 +153,7 @@ test("quote editor renders overview and active item cues", () => {
   assert(html.includes("Konfigurálási lépések"));
   assert(html.includes("Profil és méret"));
   assert(html.includes("Árazási alap"));
+  assert(html.includes("Generált szerkezeti rajz"));
   assert(html.includes("Fizetendő bruttó"));
   assert(html.includes("data-bind-item=\"sectionId\""));
   assert(html.includes("data-bind-item=\"room\""));

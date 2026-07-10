@@ -804,6 +804,38 @@ button {
   max-height: 320px;
 }
 
+.item-visual-frame {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.item-visual-frame figcaption {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.item-visual-frame.compact {
+  gap: 4px;
+}
+
+.item-visual-frame.compact figcaption {
+  font-size: 9px;
+}
+
+.item-visual-frame.compact .opening-svg,
+.item-visual-frame.compact .preview-image {
+  max-width: 110px;
+  max-height: 92px;
+}
+
 .preview-image {
   max-width: min(92%, 520px);
   max-height: 320px;
@@ -1822,6 +1854,18 @@ tr.selectable.active td:first-child {
   .print-item svg {
     width: 120px;
     height: auto;
+  }
+
+  .print-item .item-visual-frame {
+    gap: 3px;
+    padding: 6px;
+    border: 1px solid #e2e2e2;
+    border-radius: 6px;
+  }
+
+  .print-item .item-visual-frame figcaption {
+    color: #555;
+    font-size: 8px;
   }
 
   .print-item img {

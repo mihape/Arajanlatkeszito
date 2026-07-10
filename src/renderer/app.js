@@ -1060,12 +1060,11 @@ function renderCustomerPresentationMode(quote, customer, totals) {
 
 function renderPresentationItemCard(item, quote) {
   const calc = calcItem(item, quote);
-  const image = item.productTypeId === "interior-door" ? getInteriorDoorImage(item) : state.openingImages?.[item.openingTypeId];
   const meta = itemPresentationMetaText(item);
   return `
     <article class="presentation-item-card">
       <div class="presentation-item-visual">
-        ${image ? `<img class="preview-image" src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height, false, item.openingDirection)}
+        ${renderItemVisual(item, { compact: true })}
       </div>
       <div class="presentation-item-copy">
         <strong>${esc(itemTitle(item))}</strong>
@@ -1112,7 +1111,6 @@ function renderPdfExportPanel(quote) {
 
 function renderPresentationPreview(quote, totals) {
   const item = quote.items.find((row) => row.id === ui.selectedItemId) || quote.items[0] || ui.itemDraft;
-  const image = item.productTypeId === "interior-door" ? getInteriorDoorImage(item) : state.openingImages?.[item.openingTypeId];
   return `
     <section class="panel presentation-panel">
       <div class="panel-header">
@@ -1123,7 +1121,7 @@ function renderPresentationPreview(quote, totals) {
       </div>
       <div class="panel-body presentation-body">
         <div class="presentation-visual">
-          ${image ? `<img class="preview-image" src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height, false, item.openingDirection)}
+          ${renderItemVisual(item)}
         </div>
         <div>
           <strong>${esc(itemTitle(item))}</strong>
@@ -1961,7 +1959,6 @@ function noteField(draft) {
 
 function renderPreviewPanel(calc) {
   const draft = ui.itemDraft;
-  const image = draft.productTypeId === "interior-door" ? getInteriorDoorImage(draft) : state.openingImages?.[draft.openingTypeId];
   const previewTitle = draft.productTypeId === "interior-door" ? interiorItemTitle(draft) : openingName(draft.openingTypeId);
   return `
     <section class="panel">
@@ -1973,7 +1970,7 @@ function renderPreviewPanel(calc) {
       </div>
       <div class="panel-body preview-wrap">
         <div class="drawing-stage">
-          ${image ? `<img class="preview-image" src="${image}" alt="${esc(previewTitle)}" />` : renderOpeningSvg(draft.openingTypeId, draft.width, draft.height, false, draft.openingDirection)}
+          ${renderItemVisual(draft)}
         </div>
         <div class="tag-row">
           <span class="tag teal">${esc(previewTitle)}</span>
@@ -3000,10 +2997,9 @@ function renderPrintSheet(quote) {
 function renderPrintItem(item, quote, index) {
   const calc = calcItem(item, quote);
   const profile = getProfile(item.profileId);
-  const image = item.productTypeId === "interior-door" ? getInteriorDoorImage(item) : state.openingImages?.[item.openingTypeId];
   return `
     <div class="print-item">
-      <div>${image ? `<img src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height, true, item.openingDirection)}</div>
+      <div>${renderItemVisual(item, { compact: true, print: true })}</div>
       <div>
         <strong>${index + 1}. ${esc(itemTitle(item))}</strong><br />
         ${itemMetaText(item) ? `${esc(itemMetaText(item))}<br />` : ""}
@@ -4154,6 +4150,34 @@ function parseInteriorSizes(value = "") {
 
 function getInteriorDoorImage(item) {
   return interiorModel(item.interiorModelId)?.images?.[item.interiorColorId] || "";
+}
+
+function getItemVisualSource(item) {
+  const image = item.productTypeId === "interior-door" ? getInteriorDoorImage(item) : state.openingImages?.[item.openingTypeId];
+  return {
+    image,
+    mode: image ? "uploaded" : "generated",
+    label: image ? "Feltöltött termékkép" : "Generált szerkezeti rajz"
+  };
+}
+
+function renderItemVisual(item, options = {}) {
+  const visual = getItemVisualSource(item);
+  const classes = [
+    "item-visual-frame",
+    options.compact ? "compact" : "",
+    options.print ? "print" : "",
+    visual.mode
+  ].filter(Boolean).join(" ");
+  const imageOrDrawing = visual.image
+    ? `<img class="preview-image" src="${visual.image}" alt="${esc(itemTitle(item))}" />`
+    : renderOpeningSvg(item.openingTypeId, item.width, item.height, Boolean(options.compact || options.print), item.openingDirection);
+  return `
+    <figure class="${classes}">
+      ${imageOrDrawing}
+      <figcaption>${esc(visual.label)}</figcaption>
+    </figure>
+  `;
 }
 
 function interiorItemTitle(item) {
