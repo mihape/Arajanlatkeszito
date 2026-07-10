@@ -99,14 +99,23 @@ Az RC tesztelesnel ne csak azt ellenorizd, hogy mentheto-e az adat, hanem azt is
 - Hozz letre uj ajanlatot.
 - Allits be AFA-t.
 - Adj hozza legalabb egy nyilaszaros tetelt.
+- Ellenorizd, hogy a tetelszerkeszto nem egy hosszu osztatlan urlap, hanem szakmai lepesekre bontott konfigurator.
+- Kulteri tetelnel valassz `Balos`, `Jobbos` vagy `Nincs / fix` nyitasiranyt, es ellenorizd, hogy a rajz es a cimkek ezt mutatjak.
 - A tetelnel toltsd ki a `Helyiseg`, `Pozicio / jel` es `Szekcio` mezoket.
 - Ellenorizd, hogy a tetellistaban a szekcio alcim es reszosszeg megjelenik.
 - Adj hozza egy kiegeszito vagy beepitesi tetelt, ha van feltoltott adat.
 - Ellenorizd a netto, AFA es brutto osszesitot.
+- Ellenorizd, hogy az aktiv tetelnel latszik az arazasi alap, a nettó ugyfelar, a belso beszerzes es a gyarthatosagi allapot.
 
 ### 4. PDF export
 
 Az ajanlatszerkesztoben a kulon `PDF export` panelbol inditsd az exportot.
+
+Export elotti ellenorzes:
+
+- az `Export ellenorzes` blokk latszik a PDF panelben
+- hianyzo ugyfel, projektcim, tétel, tiltott matrix cella vagy hianyos torzsadat eseten figyelmeztet
+- az ugyfel PDF inditasakor a rendszer figyelmeztet, de belso teszthez nem akasztja meg feleslegesen az exportot
 
 Ugyfel PDF:
 
@@ -115,6 +124,8 @@ Ugyfel PDF:
 - beszerzesi ar, haszon es fedezet nem latszik
 - a szekcio alcimek es reszosszegek latszanak
 - helyiseg/pozicio jeloles latszik, ha ki van toltve
+- a kulteri tetelek nyitasiranya latszik, ha ertelmezheto
+- feltoltott kep hianyaban `Generalt szerkezeti rajz` jelenik meg
 
 Belso PDF:
 
@@ -127,6 +138,8 @@ Belso PDF:
 
 - Az ajanlatszerkesztoben kapcsold be az `Ugyfel nezet` modot.
 - Ellenorizd, hogy ugyfelbarat kartyak, rajzok/kepek es eladasi arak jelennek meg.
+- Ellenorizd, hogy feltoltott kep es generalt szerkezeti rajz azonos logikaval, rendezett keretben jelenik meg.
+- Ellenorizd, hogy a nyitasirany es a helyiseg/pozicio metaadat ugyfelnek is erthetoen latszik.
 - Ellenorizd, hogy beszerzesi ar, haszon es fedezet nem resze a prezentacios nezetnek.
 - Kapcsold vissza a szerkesztoi nezetet, es ellenorizd, hogy a tetel szerkesztheto marad.
 
@@ -158,3 +171,8 @@ Az RC-ben mar van elso ugyfelnezet MVP, de ez meg nem a vegleges teljes prezenta
 - PDF export UX: #29
 - Ugyfelprezentacios MVP: #33
 - RC tesztelesi dokumentacio: #31
+- Professzionalis Visual Window-szeru konfigurator epic: #34
+- Nyitasirany es balos/jobbos rajz: #36
+- Vezetett tetelkonfigurator workflow: #35
+- Ugyfelnek mutathato rajz/kep rendereles: #39
+- Export elotti ellenorzesek: #38

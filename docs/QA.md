@@ -333,6 +333,38 @@ Next RC build focus:
 - validate installer startup with existing local test data.
 - manually try: item room/position, sections, customer/internal PDF export, customer view toggle.
 
+## 2026-07-10 Professional configurator slice
+
+Implemented under #34:
+
+- #36: exterior item opening direction metadata with `Balos`, `Jobbos` and `Nincs / fix`, plus left/right generated SVG drawing cues.
+- #35: guided quote item configurator workflow with step status, calculation strip and grouped exterior/interior form sections.
+- #39: shared item visual rendering for editor, customer presentation and PDF, with uploaded image vs generated drawing fallback labels.
+- #38: pre-export readiness checks for missing customer/address/items, blocked matrix cells and incomplete item metadata.
+- #37: RC testing documentation updated for the professional configurator checks.
+
+Validation:
+
+```bash
+npm run check
+npm audit --audit-level=moderate
+```
+
+Result:
+
+- renderer smoke tests cover the workflow UI, export readiness block, generated drawing fallback, room/position metadata, opening direction and customer presentation mode.
+- pricing, SQLite adapter, PDF channel, CRM contract, matrix import, Windows validation helper, Electron smoke and installer helper tests remain green.
+- audit reported 0 vulnerabilities.
+
+Next RC manual focus:
+
+- create and install the next RC build after #37 closes.
+- verify `Balos`/`Jobbos` drawing direction in the installed Windows app.
+- verify the guided item configurator remains fast for repeated item entry.
+- verify customer PDF shows sales prices, visual drawing/image, section totals and readiness warnings without purchase price/margin.
+- verify internal PDF still shows purchase price and margin/fedezet.
+- verify uploaded opening/interior images and generated drawing fallback render acceptably in PDF.
+
 ## 2026-07-07 Windows validation helper
 
 Implemented:
