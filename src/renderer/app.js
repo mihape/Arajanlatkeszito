@@ -29,6 +29,12 @@ const quoteSections = [
   { id: "other", name: "Egyéb tételek" }
 ];
 
+const openingDirectionOptions = [
+  { id: "right", name: "Jobbos" },
+  { id: "left", name: "Balos" },
+  { id: "none", name: "Nincs / fix" }
+];
+
 const interiorFinishOptions = [
   { id: "decor", name: "Dekor ajtó", priceField: "decorPrice" },
   { id: "cpl", name: "CPL ajtó", priceField: "cplPrice" }
@@ -675,6 +681,7 @@ function createDefaultItem(currentState = state) {
     id: "",
     productTypeId: "window",
     openingTypeId: "tilt-turn",
+    openingDirection: "right",
     profileId: currentState.catalog.profiles[0]?.id || "",
     width: 1200,
     height: 1500,
@@ -1054,14 +1061,15 @@ function renderCustomerPresentationMode(quote, customer, totals) {
 function renderPresentationItemCard(item, quote) {
   const calc = calcItem(item, quote);
   const image = item.productTypeId === "interior-door" ? getInteriorDoorImage(item) : state.openingImages?.[item.openingTypeId];
+  const meta = itemPresentationMetaText(item);
   return `
     <article class="presentation-item-card">
       <div class="presentation-item-visual">
-        ${image ? `<img class="preview-image" src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height)}
+        ${image ? `<img class="preview-image" src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height, false, item.openingDirection)}
       </div>
       <div class="presentation-item-copy">
         <strong>${esc(itemTitle(item))}</strong>
-        <span>${itemMetaText(item) ? `${esc(itemMetaText(item))} · ` : ""}${number(item.width)} x ${number(item.height)} mm · ${number(item.quantity)} db</span>
+        <span>${meta ? `${esc(meta)} · ` : ""}${number(item.width)} x ${number(item.height)} mm · ${number(item.quantity)} db</span>
       </div>
       <div class="presentation-item-price">
         <span>Nettó</span>
@@ -1115,11 +1123,11 @@ function renderPresentationPreview(quote, totals) {
       </div>
       <div class="panel-body presentation-body">
         <div class="presentation-visual">
-          ${image ? `<img class="preview-image" src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height)}
+          ${image ? `<img class="preview-image" src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height, false, item.openingDirection)}
         </div>
         <div>
           <strong>${esc(itemTitle(item))}</strong>
-          <p>${number(item.width)} x ${number(item.height)} mm · ${number(item.quantity || 1)} db</p>
+          <p>${itemPresentationMetaText(item) ? `${esc(itemPresentationMetaText(item))} · ` : ""}${number(item.width)} x ${number(item.height)} mm · ${number(item.quantity || 1)} db</p>
         </div>
         <div class="presentation-totals">
           ${summaryRow("Nettó", money(totals.net))}
@@ -1556,6 +1564,12 @@ function renderExteriorItemFields(draft) {
           ${exteriorOpeningTypes().map((item) => `<option value="${item.id}" ${item.id === draft.openingTypeId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
         </select>
       </div>
+      <div class="field">
+        <label>Nyitásirány</label>
+        <select data-bind-item="openingDirection">
+          ${openingDirectionOptions.map((item) => `<option value="${item.id}" ${item.id === draft.openingDirection ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+        </select>
+      </div>
       <div class="field full">
         <label>Gyártó / profil</label>
         <select data-bind-item="profileId">
@@ -1816,10 +1830,11 @@ function renderPreviewPanel(calc) {
       </div>
       <div class="panel-body preview-wrap">
         <div class="drawing-stage">
-          ${image ? `<img class="preview-image" src="${image}" alt="${esc(previewTitle)}" />` : renderOpeningSvg(draft.openingTypeId, draft.width, draft.height)}
+          ${image ? `<img class="preview-image" src="${image}" alt="${esc(previewTitle)}" />` : renderOpeningSvg(draft.openingTypeId, draft.width, draft.height, false, draft.openingDirection)}
         </div>
         <div class="tag-row">
           <span class="tag teal">${esc(previewTitle)}</span>
+          ${openingDirectionText(draft) ? `<span class="tag">${esc(openingDirectionText(draft))}</span>` : ""}
           <span class="tag">${number(draft.width)} x ${number(draft.height)} mm</span>
           <span class="tag amber">${esc(calc.matrixNote)}</span>
         </div>
@@ -2845,12 +2860,13 @@ function renderPrintItem(item, quote, index) {
   const image = item.productTypeId === "interior-door" ? getInteriorDoorImage(item) : state.openingImages?.[item.openingTypeId];
   return `
     <div class="print-item">
-      <div>${image ? `<img src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height, true)}</div>
+      <div>${image ? `<img src="${image}" alt="${esc(itemTitle(item))}" />` : renderOpeningSvg(item.openingTypeId, item.width, item.height, true, item.openingDirection)}</div>
       <div>
         <strong>${index + 1}. ${esc(itemTitle(item))}</strong><br />
         ${itemMetaText(item) ? `${esc(itemMetaText(item))}<br />` : ""}
         ${item.productTypeId === "interior-door" ? esc(interiorPrintDetails(item)) : `${esc(profile?.manufacturer || "")} · ${esc(profile?.name || "")}`}<br />
         Méret: ${number(item.width)} x ${number(item.height)} mm · Mennyiség: ${number(item.quantity)} db<br />
+        ${openingDirectionText(item) ? `${esc(openingDirectionText(item))}<br />` : ""}
         ${item.productTypeId === "interior-door"
           ? `${esc(interiorPrintOptions(item))}<br />`
           : `Szín: ${esc(colorName(item.colorId))} (${esc(colorModeName(item.colorMode))}) · Üvegezés: ${esc(glassName(item.glassId))} · ${esc(formatThermalInfo(item))}<br />`}
@@ -3311,6 +3327,7 @@ function normalizeItem(item) {
     room: String(item.room || "").trim(),
     position: String(item.position || "").trim(),
     sectionId: quoteSections.some((section) => section.id === item.sectionId) ? item.sectionId : defaultSectionIdForItem(item),
+    openingDirection: openingDirectionOptions.some((option) => option.id === item.openingDirection) ? item.openingDirection : "right",
     colorMode: item.colorMode || "outside",
     interiorCustomFrame: Boolean(item.interiorCustomFrame),
     interiorFrameDepthCm: Number(item.interiorFrameDepthCm || 12),
@@ -4022,6 +4039,26 @@ function itemMetaText(item) {
   return parts.join(" · ");
 }
 
+function openingDirectionName(id) {
+  return openingDirectionOptions.find((option) => option.id === id)?.name || openingDirectionOptions[0].name;
+}
+
+function openingDirectionText(item) {
+  if (!hasOpeningDirection(item)) return "";
+  return `Nyitásirány: ${openingDirectionName(item.openingDirection)}`;
+}
+
+function hasOpeningDirection(item) {
+  const directionalTypes = ["turn", "tilt-turn", "double-tilt-turn", "balcony", "entrance-door", "door"];
+  return item.productTypeId !== "interior-door"
+    && directionalTypes.includes(item.openingTypeId)
+    && ["left", "right"].includes(item.openingDirection);
+}
+
+function itemPresentationMetaText(item) {
+  return [itemMetaText(item), openingDirectionText(item)].filter(Boolean).join(" · ");
+}
+
 function defaultSectionIdForItem(item) {
   if (item.sectionId && quoteSections.some((section) => section.id === item.sectionId)) return item.sectionId;
   if (item.productTypeId === "interior-door") return "interior-doors";
@@ -4057,6 +4094,7 @@ function itemOptionTags(item) {
   }
   return `
     <span class="tag">${esc(sectionName(defaultSectionIdForItem(item)))}</span>
+    ${openingDirectionText(item) ? `<span class="tag">${esc(openingDirectionText(item))}</span>` : ""}
     <span class="tag">${esc(colorName(item.colorId))}</span>
     <span class="tag">${esc(colorModeName(item.colorMode))}</span>
     <span class="tag">${esc(glassName(item.glassId))}</span>
@@ -4133,11 +4171,16 @@ function addDays(dateString, days) {
   return date.toISOString().slice(0, 10);
 }
 
-function renderOpeningSvg(typeId, width = 1200, height = 1500, compact = false) {
+function renderOpeningSvg(typeId, width = 1200, height = 1500, compact = false, openingDirection = "none") {
   const w = Number(width || 0);
   const h = Number(height || 0);
   const labelSize = compact ? 12 : 14;
   const stroke = compact ? 3 : 4;
+  const safeDirection = ["left", "right", "none"].includes(openingDirection) ? openingDirection : "right";
+  const isLeft = safeDirection === "left";
+  const directionLabel = isLeft ? "B" : safeDirection === "right" ? "J" : "";
+  const directionText = isLeft ? "Balos" : safeDirection === "right" ? "Jobbos" : "";
+  const markerId = `arrow-${String(typeId).replace(/[^a-z0-9-]/gi, "-")}-${safeDirection}`;
   const muted = "#7a878a";
   const frame = "#163238";
   const sash = "#0f766e";
@@ -4147,19 +4190,26 @@ function renderOpeningSvg(typeId, width = 1200, height = 1500, compact = false) 
   lines.push(`<rect x="72" y="42" width="216" height="156" rx="2" fill="none" stroke="${frame}" stroke-width="${stroke - 1}" />`);
 
   if (typeId === "turn") {
-    lines.push(`<line x1="72" y1="42" x2="288" y2="198" stroke="${sash}" stroke-width="2.5" />`);
-    lines.push(`<path d="M95 120 Q138 70 183 120" fill="none" stroke="${sash}" stroke-width="2.5" />`);
+    lines.push(`<line x1="${isLeft ? 288 : 72}" y1="42" x2="${isLeft ? 72 : 288}" y2="198" stroke="${sash}" stroke-width="2.5" />`);
+    lines.push(`<path d="${isLeft ? "M265 120 Q222 70 177 120" : "M95 120 Q138 70 183 120"}" fill="none" stroke="${sash}" stroke-width="2.5" />`);
   } else if (typeId === "tilt") {
     lines.push(`<path d="M72 42 L180 154 L288 42" fill="none" stroke="${sash}" stroke-width="2.5" />`);
   } else if (typeId === "tilt-turn") {
-    lines.push(`<line x1="72" y1="42" x2="288" y2="198" stroke="${sash}" stroke-width="2.5" />`);
+    lines.push(`<line x1="${isLeft ? 288 : 72}" y1="42" x2="${isLeft ? 72 : 288}" y2="198" stroke="${sash}" stroke-width="2.5" />`);
     lines.push(`<path d="M72 42 L180 154 L288 42" fill="none" stroke="${sash}" stroke-width="2.5" />`);
   } else if (typeId === "double-tilt-turn") {
     lines.push(`<line x1="180" y1="28" x2="180" y2="212" stroke="${frame}" stroke-width="${stroke}" />`);
-    lines.push(`<line x1="72" y1="42" x2="180" y2="198" stroke="${sash}" stroke-width="2.5" />`);
-    lines.push(`<path d="M72 42 L126 154 L180 42" fill="none" stroke="${sash}" stroke-width="2.5" />`);
-    lines.push(`<line x1="288" y1="42" x2="180" y2="198" stroke="${sash}" stroke-width="2.5" />`);
-    lines.push(`<path d="M180 42 L234 154 L288 42" fill="none" stroke="${sash}" stroke-width="2.5" />`);
+    if (isLeft) {
+      lines.push(`<line x1="180" y1="42" x2="72" y2="198" stroke="${sash}" stroke-width="2.5" />`);
+      lines.push(`<path d="M72 42 L126 154 L180 42" fill="none" stroke="${sash}" stroke-width="2.5" />`);
+      lines.push(`<line x1="288" y1="42" x2="180" y2="198" stroke="${sash}" stroke-width="2.5" opacity="0.45" />`);
+      lines.push(`<path d="M180 42 L234 154 L288 42" fill="none" stroke="${sash}" stroke-width="2.5" opacity="0.45" />`);
+    } else {
+      lines.push(`<line x1="72" y1="42" x2="180" y2="198" stroke="${sash}" stroke-width="2.5" opacity="0.45" />`);
+      lines.push(`<path d="M72 42 L126 154 L180 42" fill="none" stroke="${sash}" stroke-width="2.5" opacity="0.45" />`);
+      lines.push(`<line x1="180" y1="42" x2="288" y2="198" stroke="${sash}" stroke-width="2.5" />`);
+      lines.push(`<path d="M180 42 L234 154 L288 42" fill="none" stroke="${sash}" stroke-width="2.5" />`);
+    }
   } else if (typeId === "divided") {
     lines.push(`<line x1="180" y1="28" x2="180" y2="212" stroke="${frame}" stroke-width="${stroke}" />`);
     lines.push(`<line x1="58" y1="120" x2="302" y2="120" stroke="${frame}" stroke-width="${stroke}" />`);
@@ -4170,22 +4220,28 @@ function renderOpeningSvg(typeId, width = 1200, height = 1500, compact = false) 
     lines.push(`<rect x="100" y="18" width="160" height="214" rx="3" fill="${glass}" stroke="${frame}" stroke-width="${stroke}" />`);
     lines.push(`<rect x="114" y="34" width="132" height="182" rx="2" fill="none" stroke="${frame}" stroke-width="${stroke - 1}" />`);
     if (typeId === "door") lines.push(`<circle cx="228" cy="126" r="4" fill="${sash}" />`);
-    else lines.push(`<line x1="114" y1="34" x2="246" y2="216" stroke="${sash}" stroke-width="2.5" />`);
+    else lines.push(`<line x1="${isLeft ? 246 : 114}" y1="34" x2="${isLeft ? 114 : 246}" y2="216" stroke="${sash}" stroke-width="2.5" />`);
   } else if (typeId === "fixed") {
     lines.push(`<line x1="72" y1="42" x2="288" y2="198" stroke="${sash}" stroke-width="2.1" opacity="0.6" />`);
     lines.push(`<line x1="288" y1="42" x2="72" y2="198" stroke="${sash}" stroke-width="2.1" opacity="0.6" />`);
   }
 
+  if (directionLabel && ["turn", "tilt-turn", "double-tilt-turn", "balcony", "entrance-door"].includes(typeId)) {
+    lines.push(`<rect x="24" y="28" width="28" height="24" rx="5" fill="#ecfeff" stroke="${sash}" stroke-width="1.5" />`);
+    lines.push(`<text x="38" y="45" text-anchor="middle" font-size="13" font-weight="800" fill="${sash}">${directionLabel}</text>`);
+    if (!compact) lines.push(`<text x="180" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="${sash}">${directionText}</text>`);
+  }
+
   return `
-    <svg class="opening-svg" viewBox="0 0 360 260" role="img" aria-label="${esc(openingName(typeId))}">
+    <svg class="opening-svg" viewBox="0 0 360 260" role="img" aria-label="${esc(`${openingName(typeId)} ${directionText}`.trim())}">
       <defs>
-        <marker id="arrow-${typeId}" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
+        <marker id="${markerId}" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
           <path d="M0,0 L7,3.5 L0,7 Z" fill="${muted}" />
         </marker>
       </defs>
       ${lines.join("")}
-      <line x1="58" y1="232" x2="302" y2="232" stroke="${muted}" stroke-width="1.5" marker-start="url(#arrow-${typeId})" marker-end="url(#arrow-${typeId})" />
-      <line x1="326" y1="28" x2="326" y2="212" stroke="${muted}" stroke-width="1.5" marker-start="url(#arrow-${typeId})" marker-end="url(#arrow-${typeId})" />
+      <line x1="58" y1="232" x2="302" y2="232" stroke="${muted}" stroke-width="1.5" marker-start="url(#${markerId})" marker-end="url(#${markerId})" />
+      <line x1="326" y1="28" x2="326" y2="212" stroke="${muted}" stroke-width="1.5" marker-start="url(#${markerId})" marker-end="url(#${markerId})" />
       <text x="180" y="252" text-anchor="middle" font-size="${labelSize}" font-weight="700" fill="${muted}">${number(w)} mm</text>
       <text x="344" y="124" transform="rotate(90 344 124)" text-anchor="middle" font-size="${labelSize}" font-weight="700" fill="${muted}">${number(h)} mm</text>
     </svg>
