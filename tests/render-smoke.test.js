@@ -150,6 +150,7 @@ test("quote editor renders overview and active item cues", () => {
   assert(html.includes("Beszerzési ár nélkül"));
   assert(html.includes("Biztonságos ügyfél PDF"));
   assert(html.includes("Belső PDF beszerzéssel"));
+  assert(html.includes("Export ellenőrzés"));
   assert(html.includes("Konfigurálási lépések"));
   assert(html.includes("Profil és méret"));
   assert(html.includes("Árazási alap"));

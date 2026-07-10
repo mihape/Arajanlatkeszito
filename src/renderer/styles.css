@@ -932,6 +932,62 @@ button {
   opacity: 0.82;
 }
 
+.readiness-box {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 8px;
+  background: #f7fcfb;
+}
+
+.readiness-box.warning {
+  border-color: #efd09a;
+  background: var(--amber-2);
+}
+
+.readiness-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.readiness-head strong,
+.readiness-ok span {
+  display: block;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.readiness-head small,
+.readiness-more {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.3;
+}
+
+.readiness-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: #74480a;
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.3;
+}
+
+.readiness-list .info {
+  color: var(--muted);
+}
+
+.readiness-ok {
+  display: grid;
+  gap: 5px;
+  color: var(--teal);
+}
+
 .presentation-body {
   display: grid;
   gap: 12px;

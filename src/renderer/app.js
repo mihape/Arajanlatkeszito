@@ -1080,6 +1080,7 @@ function renderPresentationItemCard(item, quote) {
 }
 
 function renderPdfExportPanel(quote) {
+  const readiness = quoteReadinessChecks(quote, getCustomer(quote.customerId));
   return `
     <section class="panel pdf-export-panel">
       <div class="panel-header">
@@ -1089,6 +1090,7 @@ function renderPdfExportPanel(quote) {
         </div>
       </div>
       <div class="panel-body pdf-export-actions">
+        ${renderQuoteReadiness(readiness)}
         <button class="button primary" data-action="print-quote" data-print-mode="customer">
           ${icon("print")}
           <span>
@@ -1106,6 +1108,63 @@ function renderPdfExportPanel(quote) {
         ${!quote.items.length ? `<div class="warning-box">${icon("alert")}PDF előtt érdemes legalább egy tételt hozzáadni.</div>` : ""}
       </div>
     </section>
+  `;
+}
+
+function quoteReadinessChecks(quote, customer) {
+  const issues = [];
+  const ok = [];
+  if (customer) ok.push("Ügyfél kiválasztva.");
+  else issues.push({ level: "warning", text: "Nincs ügyfél kiválasztva a vevői PDF-hez." });
+
+  if (quote.projectAddress || customer?.address) ok.push("Projekt cím megadva.");
+  else issues.push({ level: "warning", text: "Hiányzik a projekt címe vagy az ügyfél címe." });
+
+  if (quote.items.length) ok.push(`${number(quote.items.length)} tétel szerepel az ajánlatban.`);
+  else issues.push({ level: "warning", text: "Még nincs tétel az ajánlatban." });
+
+  quote.items.forEach((item, index) => {
+    const label = `${index + 1}. ${itemTitle(item)}`;
+    const calc = calcItem(item, quote);
+    if (calc.blocked) {
+      issues.push({ level: "warning", text: `${label}: az ármátrix szerint nem gyártható méret.` });
+    } else if (Number(calc.parts?.base || 0) <= 0) {
+      issues.push({ level: "warning", text: `${label}: nincs egyértelmű alapár a kalkulációban.` });
+    }
+    if (!item.sectionId) issues.push({ level: "info", text: `${label}: nincs szekció megadva.` });
+    if (!item.room && !item.position) issues.push({ level: "info", text: `${label}: helyiség vagy pozíció jel nincs kitöltve.` });
+    if (item.productTypeId === "interior-door") {
+      if (!item.interiorManufacturerId || !item.interiorModelId || !item.interiorColorId) {
+        issues.push({ level: "warning", text: `${label}: hiányos beltéri ajtó törzsadat választás.` });
+      }
+    } else if (!item.profileId || !item.openingTypeId || !item.colorId || !item.glassId) {
+      issues.push({ level: "warning", text: `${label}: hiányos kültéri profil, nyitáskép, szín vagy üveg választás.` });
+    }
+  });
+
+  return { ok, issues, ready: issues.length === 0 };
+}
+
+function renderQuoteReadiness(readiness) {
+  const shownIssues = readiness.issues.slice(0, 6);
+  return `
+    <div class="readiness-box ${readiness.ready ? "ready" : "warning"}">
+      <div class="readiness-head">
+        ${icon(readiness.ready ? "check" : "alert")}
+        <div>
+          <strong>Export ellenőrzés</strong>
+          <small>${readiness.ready ? "A vevői PDF-hez szükséges alapadatok rendben vannak." : `${number(readiness.issues.length)} ellenőrizendő pont vevői PDF előtt.`}</small>
+        </div>
+      </div>
+      ${shownIssues.length ? `
+        <ul class="readiness-list">
+          ${shownIssues.map((issue) => `<li class="${esc(issue.level)}">${esc(issue.text)}</li>`).join("")}
+        </ul>
+      ` : `
+        <div class="readiness-ok">${readiness.ok.slice(0, 3).map((item) => `<span>${esc(item)}</span>`).join("")}</div>
+      `}
+      ${readiness.issues.length > shownIssues.length ? `<small class="readiness-more">+ ${number(readiness.issues.length - shownIssues.length)} további ellenőrizendő pont.</small>` : ""}
+    </div>
   `;
 }
 
@@ -3383,6 +3442,13 @@ async function deleteQuote(id) {
 async function printQuote(id, mode = "customer") {
   if (id) ui.selectedQuoteId = id;
   ui.printMode = mode === "internal" ? "internal" : "customer";
+  const quoteForCheck = getSelectedQuote();
+  if (quoteForCheck && ui.printMode === "customer") {
+    const readiness = quoteReadinessChecks(quoteForCheck, getCustomer(quoteForCheck.customerId));
+    if (readiness.issues.length) {
+      showToast(`Ügyfél PDF előtt ${readiness.issues.length} ellenőrizendő pont maradt.`);
+    }
+  }
   render();
   document.body.classList.toggle("print-internal", ui.printMode === "internal");
   document.body.classList.toggle("print-customer", ui.printMode !== "internal");
