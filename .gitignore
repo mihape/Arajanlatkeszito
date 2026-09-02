@@ -10,6 +10,8 @@ out/
 
 # Local reference offers - may contain real customer and pricing data
 mintaajanalat/
+Mintak/
+mintak/
 
 # Logs
 *.log

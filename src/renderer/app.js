@@ -57,15 +57,28 @@ const openingTypes = [
   { id: "door", name: "Ajtó", productTypeId: "interior-door", note: "" }
 ];
 
-const navItems = [
-  { id: "quotes", label: "Ajánlatok", icon: "file" },
-  { id: "complete-quotes", label: "Komplett ajánlat készítés", icon: "grid" },
-  { id: "customers", label: "Ügyfelek", icon: "users" },
+const constructionNavItems = [
+  { id: "complete-quotes", label: "Építészeti ajánlatok", icon: "file" },
+  { id: "complete-catalog", label: "Építészeti törzsadatok", icon: "database" }
+];
+
+const openingsNavItems = [
+  { id: "quotes", label: "Nyílászáró ajánlatok", icon: "file" },
   { id: "profiles", label: "Műanyag nyílászárók", icon: "factory" },
   { id: "interior", label: "Beltéri ajtók", icon: "door" },
   { id: "matrices", label: "Ármátrixok", icon: "grid" },
-  { id: "extras", label: "Kiegészítők", icon: "layers" },
+  { id: "extras", label: "Kiegészítők", icon: "layers" }
+];
+
+const commonNavItems = [
+  { id: "customers", label: "Ügyfelek", icon: "users" },
   { id: "settings", label: "Beállítások", icon: "settings" }
+];
+
+const navItems = [
+  ...constructionNavItems,
+  ...openingsNavItems,
+  ...commonNavItems
 ];
 
 const app = document.getElementById("app");
@@ -73,6 +86,8 @@ let state = loadState();
 let desktopSaveTimer = null;
 let ui = {
   view: "quotes",
+  activeModule: "openings",
+  sidebarCollapsed: false,
   selectedQuoteId: state.quotes[0]?.id || "",
   selectedCompleteQuoteId: state.completeQuotes?.[0]?.id || "",
   selectedCompleteSectionId: "",
@@ -85,6 +100,7 @@ let ui = {
   completeStatusFilter: "all",
   completeCustomerFilter: "all",
   completeSearch: "",
+  completeTemplateSearch: "",
   completeExportStyle: "modern",
   selectedItemId: "",
   selectedCustomerId: state.customers[0]?.id || "",
@@ -864,7 +880,7 @@ function getCatalogItem(collection, id) {
 function render() {
   const quote = getSelectedQuote();
   app.innerHTML = `
-    <div class="app-shell">
+    <div class="app-shell ${ui.sidebarCollapsed ? "sidebar-collapsed" : ""}">
       ${renderSidebar()}
       <main class="main">
         ${renderTopbar()}
@@ -895,36 +911,77 @@ function focusCompleteQuickEntry() {
 }
 
 function renderSidebar() {
+  const isConstruction = ui.activeModule !== "openings";
+  const currentNavItems = isConstruction ? constructionNavItems : openingsNavItems;
+
   return `
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">NA</div>
-        <div>
-          <div class="brand-title">Nyílászáró<br />Ajánlatkészítő</div>
-          <div class="brand-subtitle">${APP_MODE === "demo" ? "Demo mód - fiktív adatok" : "Helyi adatbázisú kalkulátor"}</div>
+    <aside class="sidebar ${ui.sidebarCollapsed ? "collapsed" : ""}">
+      <div class="brand-header-row">
+        <div class="brand">
+          <div class="brand-mark">${isConstruction ? "ÉK" : "NY"}</div>
+          <div>
+            <div class="brand-title">${isConstruction ? "Építészet &<br />Kivitelezés" : "Nyílászáró<br />Ajánlatkészítő"}</div>
+            <div class="brand-subtitle">${APP_MODE === "demo" ? "Demo mód" : "Helyi adatbázis"}</div>
+          </div>
         </div>
+        <button type="button" class="sidebar-toggle-btn" data-action="toggle-sidebar" title="${ui.sidebarCollapsed ? "Menü kinyitása" : "Menü összecsukása"}">
+          ${ui.sidebarCollapsed ? "▶" : "◀"}
+        </button>
       </div>
+
+      <div class="module-switcher">
+        <button type="button" class="module-switcher-btn ${isConstruction ? "active" : ""}" data-action="switch-module" data-module="construction">
+          ${icon("factory")} Építészet
+        </button>
+        <button type="button" class="module-switcher-btn ${!isConstruction ? "active" : ""}" data-action="switch-module" data-module="openings">
+          ${icon("door")} Nyílászáró
+        </button>
+      </div>
+
       <nav class="nav" aria-label="Fő navigáció">
-        ${navItems.map((item) => `
-          <button class="nav-button ${ui.view === item.id || (item.id === "quotes" && ui.view === "quote-editor") || (item.id === "complete-quotes" && ui.view === "complete-quote-editor") ? "active" : ""}" data-view="${item.id}">
+        ${currentNavItems.map((item) => `
+          <button class="nav-button ${ui.view === item.id || (item.id === "quotes" && ui.view === "quote-editor") || (item.id === "complete-quotes" && ui.view === "complete-quote-editor") ? "active" : ""}" data-view="${item.id}" title="${esc(item.label)}">
+            ${icon(item.icon, "nav-icon")}
+            <span>${esc(item.label)}</span>
+          </button>
+        `).join("")}
+
+        <div class="sidebar-divider"></div>
+
+        ${commonNavItems.map((item) => `
+          <button class="nav-button ${ui.view === item.id ? "active" : ""}" data-view="${item.id}" title="${esc(item.label)}">
             ${icon(item.icon, "nav-icon")}
             <span>${esc(item.label)}</span>
           </button>
         `).join("")}
       </nav>
+
       <section>
-        <div class="sidebar-section-title">Aktív ajánlatok</div>
+        <div class="sidebar-section-title">${isConstruction ? "Aktív építési ajánlatok" : "Aktív nyílászáró ajánlatok"}</div>
         <div class="quote-list">
-          ${state.quotes.map((quote) => {
-            const customer = getCustomer(quote.customerId);
-            const totals = calcQuote(quote);
-            return `
-              <button class="quote-card ${quote.id === ui.selectedQuoteId ? "active" : ""}" data-action="select-quote" data-id="${quote.id}">
-                <strong>${esc(quote.number)} · ${esc(customer?.name || "Nincs ügyfél")}</strong>
-                <span>${esc(quote.status)} · ${money(totals.gross)}</span>
-              </button>
-            `;
-          }).join("")}
+          ${isConstruction ? (
+            (state.completeQuotes || []).slice(0, 8).map((quote) => {
+              const customer = getCustomer(quote.customerId);
+              const totals = completeQuote.summarizeQuote(quote);
+              return `
+                <button class="quote-card ${quote.id === ui.selectedCompleteQuoteId ? "active" : ""}" data-action="select-complete-quote" data-id="${quote.id}">
+                  <strong>${esc(quote.number)} · ${esc(customer?.name || "Nincs ügyfél")}</strong>
+                  <span>${esc(quote.status || "Vázlat")} · ${money(totals.gross)}</span>
+                </button>
+              `;
+            }).join("") || `<div style="font-size:11px; color:var(--muted); padding:4px;">Még nincs építési ajánlat.</div>`
+          ) : (
+            (state.quotes || []).slice(0, 8).map((quote) => {
+              const customer = getCustomer(quote.customerId);
+              const totals = calcQuote(quote);
+              return `
+                <button class="quote-card ${quote.id === ui.selectedQuoteId ? "active" : ""}" data-action="select-quote" data-id="${quote.id}">
+                  <strong>${esc(quote.number)} · ${esc(customer?.name || "Nincs ügyfél")}</strong>
+                  <span>${esc(quote.status)} · ${money(totals.gross)}</span>
+                </button>
+              `;
+            }).join("") || `<div style="font-size:11px; color:var(--muted); padding:4px;">Még nincs nyílászáró ajánlat.</div>`
+          )}
         </div>
       </section>
     </aside>
@@ -986,6 +1043,10 @@ function getViewMeta() {
       title: "Komplett ajánlat készítés",
       subtitle: "Építőipari munkanemek, külön anyag- és munkadíj, TERC-szerű PDF ajánlatok."
     },
+    "complete-catalog": {
+      title: "Komplett törzsadatok & sablonok",
+      subtitle: "Munkanemek, TERC tételszövegek, irányárak és lenyíló child variánsok kezelése."
+    },
     "complete-quote-editor": {
       title: getSelectedCompleteQuote() ? `${getSelectedCompleteQuote().number} komplett ajánlat` : "Komplett ajánlat szerkesztő",
       subtitle: "Ügyfél, munkanemek, tételsablonok, nettó anyag- és munkadíj egy helyen."
@@ -1009,6 +1070,7 @@ function renderContent(quote) {
   if (ui.view === "quote-editor") return renderQuotesView(quote);
   if (ui.view === "complete-quotes") return renderCompleteQuotesDashboard();
   if (ui.view === "complete-quote-editor") return renderCompleteQuoteEditor(getSelectedCompleteQuote());
+  if (ui.view === "complete-catalog") return renderCompleteCatalogView();
   if (ui.view === "customers") return renderCustomersView();
   if (ui.view === "profiles") return renderProfilesView();
   if (ui.view === "interior") return renderInteriorDoorsView();
@@ -1089,7 +1151,14 @@ function renderCompleteQuoteEditor(quote) {
       <section class="panel flat">
         <div class="panel-body">
           <div class="form-grid four">
-            <label>Ügyfél<select data-bind-complete-quote="customerId">${state.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === quote.customerId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}</select></label>
+            <label>Ügyfél
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <select data-bind-complete-quote="customerId" style="flex: 1;">
+                  ${state.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === quote.customerId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}
+                </select>
+                <button type="button" class="button icon-only" data-action="quick-add-customer" title="Új ügyfél gyorsfelvétele">${icon("plus")}</button>
+              </div>
+            </label>
             <label>Ajánlatszám<input value="${esc(quote.number)}" readonly /></label>
             <label>Kelt<input type="date" data-bind-complete-quote="createdAt" value="${esc(quote.createdAt)}" /></label>
             <label>Érvényesség (nap)<input type="number" min="1" data-bind-complete-quote="validityDays" value="${esc(quote.validityDays)}" /></label>
@@ -1103,18 +1172,39 @@ function renderCompleteQuoteEditor(quote) {
 
       <div class="complete-quote-layout">
         <aside class="panel complete-section-panel">
-          <div class="panel-header"><div><h2 class="panel-title">Munkanemek</h2><p class="panel-note">Jelöld ki, mely fejezetek szerepeljenek az ajánlatban.</p></div></div>
+          <div class="panel-header"><div><h2 class="panel-title">Munkanemek</h2><p class="panel-note">Kattints a munkanemre a megnyitáshoz vagy pipáld be/ki.</p></div></div>
           <div class="panel-body complete-category-list">
             ${catalog.categories.filter((category) => category.active || selectedCategoryIds.has(category.id)).map((category) => {
               const checked = selectedCategoryIds.has(category.id);
-              const selected = section?.id && quote.sections.some((entry) => entry.id === section.id && entry.categoryId === category.id);
-              return `<div class="complete-category-row ${selected ? "selected" : ""}"><label class="complete-category-choice"><input type="checkbox" data-complete-category-toggle="${esc(category.id)}" ${checked ? "checked" : ""} /><span>${esc(category.name)}</span>${category.kind === "incidental" ? `<small>járulékos</small>` : ""}</label>${checked ? `<button type="button" class="button icon-only" data-action="select-complete-section" data-id="${esc(quote.sections.find((entry) => entry.categoryId === category.id)?.id || "")}" title="Megnyitás">${icon("edit")}</button>` : ""}</div>`;
+              const matchingSection = quote.sections.find((entry) => entry.categoryId === category.id);
+              const isSelected = section?.id && matchingSection?.id === section.id;
+              const itemCount = matchingSection?.items?.length || 0;
+              return `
+                <div class="complete-category-row ${isSelected ? "selected" : ""}">
+                  <input type="checkbox" data-complete-category-toggle="${esc(category.id)}" ${checked ? "checked" : ""} title="${checked ? "Munkanem eltávolítása" : "Munkanem felvétele és megnyitása"}" />
+                  <button type="button" class="complete-category-tab-btn" data-action="open-or-toggle-category" data-category-id="${esc(category.id)}" title="${checked ? "Megnyitás a szerkesztőben" : "Munkanem felvétele"}">
+                    <span>${esc(category.name)}${category.kind === "incidental" ? `<small>(járulékos)</small>` : ""}</span>
+                    ${checked ? `<span class="badge count">${itemCount} tétel</span>` : `<span class="badge add">+ Hozzáadás</span>`}
+                  </button>
+                </div>
+              `;
             }).join("")}
           </div>
           <div class="panel-body complete-category-create"><input data-complete-category-name value="${esc(ui.completeCategoryDraft || "")}" placeholder="Új munkanem neve" /><button class="button" data-action="add-complete-category">${icon("plus")}Hozzáadás</button></div>
         </aside>
 
         <main class="complete-section-workspace">
+          ${quote.sections.length > 1 ? `
+            <div class="complete-sections-nav">
+              ${quote.sections.map((sec, idx) => `
+                <button type="button" class="complete-section-pill ${sec.id === section?.id ? "active" : ""}" data-action="select-complete-section" data-id="${esc(sec.id)}">
+                  <span class="pill-idx">${idx + 1}.</span>
+                  <span class="pill-name">${esc(sec.name)}</span>
+                  <span class="pill-count">${sec.items.length} tétel</span>
+                </button>
+              `).join("")}
+            </div>
+          ` : ""}
           ${section ? renderCompleteSectionEditor(quote, section, templates) : `<section class="panel"><div class="panel-body empty">Jelölj ki legalább egy munkanemet a bal oldali listában.</div></section>`}
         </main>
 
@@ -1135,16 +1225,356 @@ function renderCompleteQuoteEditor(quote) {
 }
 
 function renderCompleteSectionEditor(quote, section, templates) {
+  const catalog = completeCatalog();
   const item = section.items.find((entry) => entry.id === ui.selectedCompleteItemId) || ui.completeItemDraft;
   const calculated = completeQuote.calculateItem(item);
+  const searchQuery = String(ui.completeTemplateSearch || "").trim().toLowerCase();
+  const filteredTemplates = searchQuery
+    ? templates.filter((template) => template.description.toLowerCase().includes(searchQuery) || template.unit.toLowerCase().includes(searchQuery))
+    : templates;
+  const draftVariant = completeQuote.detectInsulationVariant(item.description);
+
   return `
-    <section class="panel"><div class="panel-header"><div><h2 class="panel-title">${esc(section.name)}</h2><p class="panel-note">Válassz egy sablont: a tétel azonnal bekerül, utána csak a mennyiséget és a két egységárat kell megadnod.</p></div><div class="actions"><button class="button" data-action="move-complete-section" data-direction="up" data-id="${esc(section.id)}">↑</button><button class="button" data-action="move-complete-section" data-direction="down" data-id="${esc(section.id)}">↓</button></div></div>
-      <div class="panel-body"><div class="form-grid two"><label>Tétel hozzáadása sablonból<select data-complete-template-id><option value="">Válassz tételt…</option>${templates.map((template) => `<option value="${esc(template.id)}">${esc(template.description)}</option>`).join("")}</select></label><div class="actions align-end"><button class="button" data-action="new-complete-item">${icon("plus")}Új egyedi tétel</button></div></div>${templates.length ? `<details class="complete-template-details"><summary>Tételsablonok kezelése (${templates.length} db)</summary><div class="complete-template-library">${templates.map((template) => `<div><span><strong>${esc(template.description)}</strong><small>${esc(template.unit)} · ${money(template.materialUnitNet)} anyag · ${money(template.laborUnitNet)} munkadíj</small></span><button class="button danger icon-only" data-action="archive-complete-template" data-id="${esc(template.id)}" title="Archiválás">${icon("trash")}</button></div>`).join("")}</div></details>` : ""}</div>
-      ${ui.completeItemEditorOpen ? `<div class="panel-body complete-item-form"><div class="section-subtitle">${ui.selectedCompleteItemId ? "Tétel részletes szerkesztése" : "Új egyedi tétel"}</div><div class="form-grid four"><label class="field full">Tételszöveg<textarea data-complete-item-draft="description">${esc(item.description)}</textarea></label><label>Mennyiség<input type="number" min="0.001" step="0.001" data-complete-item-draft="quantity" value="${esc(item.quantity)}" /></label><label>Mértékegység<input list="complete-units" data-complete-item-draft="unit" value="${esc(item.unit)}" /><datalist id="complete-units">${completeQuote.UNITS.map((unit) => `<option value="${esc(unit)}"></option>`).join("")}</datalist></label><label>Anyag egységár (nettó)<input type="number" min="0" step="1" data-complete-item-draft="materialUnitNet" value="${esc(item.materialUnitNet)}" /></label><label>Munkadíj egységár (nettó)<input type="number" min="0" step="1" data-complete-item-draft="laborUnitNet" value="${esc(item.laborUnitNet)}" /></label></div><div class="calculation-strip"><span>Anyag összesen <strong>${money(calculated.material)}</strong></span><span>Munkadíj összesen <strong>${money(calculated.labor)}</strong></span><span>Nettó sorösszeg <strong>${money(calculated.material + calculated.labor)}</strong></span></div><div class="actions"><button class="button primary" data-action="save-complete-item">${icon("save")}Tétel mentése</button><button class="button" data-action="save-complete-template">${icon("layers")}Mentés új tételsablonként</button>${item.templateId ? `<button class="button" data-action="update-complete-template">${icon("edit")}Törzstétel frissítése</button>` : ""}${ui.selectedCompleteItemId ? `<button class="button danger" data-action="delete-complete-item">${icon("trash")}Tétel törlése</button>` : ""}</div></div>` : ""}
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">${esc(section.name)}</h2>
+          <p class="panel-note">Válassz egy sablont vagy módosítsd a mennyiségeket és árakat.</p>
+        </div>
+        <div class="actions">
+          <button class="button" data-action="load-complete-bundle" data-id="${esc(section.id)}" title="Munkanem standard alaptételeinek betöltése">${icon("layers")}Alapcsomag betöltése</button>
+          <button class="button icon-only" data-action="move-complete-section" data-direction="up" data-id="${esc(section.id)}" title="Fel">↑</button>
+          <button class="button icon-only" data-action="move-complete-section" data-direction="down" data-id="${esc(section.id)}" title="Le">↓</button>
+        </div>
+      </div>
+      <div class="panel-body" style="padding-bottom: 4px;">
+        <label style="font-size: 12px; color: var(--muted); font-weight: 600; display: block; margin-bottom: 12px;">Munkanem megjegyzés (a PDF-en a fejezetcím alatt jelenik meg):
+          <input type="text" data-complete-section-note="${esc(section.id)}" value="${esc(section.note || "")}" placeholder="pl. Aljzatkiegyenlítő mennyisége szintezés után változhat; vagy Burkolatot megrendelő biztosítja…" style="margin-top: 4px;" />
+        </label>
+      </div>
+      <div class="panel-body">
+        <div class="form-grid two">
+          <div class="field">
+            <label>Tétel hozzáadása sablonból</label>
+            <div class="template-search-group">
+              <input type="search" class="complete-template-search-input" placeholder="Keresés sablonok között…" value="${esc(ui.completeTemplateSearch || "")}" data-complete-template-search />
+              <select data-complete-template-id>
+                <option value="">Válassz tételt (${filteredTemplates.length} db)…</option>
+                ${filteredTemplates.map((template) => `<option value="${esc(template.id)}">${esc(template.description)} (${money(template.materialUnitNet)} + ${money(template.laborUnitNet)})</option>`).join("")}
+              </select>
+            </div>
+          </div>
+          <div class="actions align-end">
+            <button class="button" data-action="new-complete-item">${icon("plus")}Új egyedi tétel</button>
+          </div>
+        </div>
+        ${templates.length ? `
+          <details class="complete-template-details">
+            <summary>Tételsablonok kezelése (${templates.length} db)</summary>
+            <div class="complete-template-library">
+              ${templates.map((template) => `
+                <div>
+                  <span><strong>${esc(template.description)}</strong><small>${esc(template.unit)} · ${money(template.materialUnitNet)} anyag · ${money(template.laborUnitNet)} munkadíj</small></span>
+                  <button class="button danger icon-only" data-action="archive-complete-template" data-id="${esc(template.id)}" title="Archiválás">${icon("trash")}</button>
+                </div>
+              `).join("")}
+            </div>
+          </details>
+        ` : ""}
+      </div>
+      ${ui.completeItemEditorOpen ? `
+        <div class="panel-body complete-item-form">
+          <div class="section-subtitle">${ui.selectedCompleteItemId ? "Tétel részletes szerkesztése" : "Új egyedi tétel"}</div>
+          ${draftVariant || section.categoryId.includes("insulation") ? `
+            <div class="variant-config-box">
+              <div class="variant-config-title">${icon("layers")} Hőszigetelés variáns gyorsbeállító (vastagság, dűbel és irányár)</div>
+              <div class="form-grid three">
+                <label>Típus
+                  <select data-complete-draft-variant="type">
+                    ${completeQuote.INSULATION_TYPES.map((t) => `<option value="${t.id}" ${t.id === (draftVariant?.typeId || "eps_white") ? "selected" : ""}>${t.label}</option>`).join("")}
+                  </select>
+                </label>
+                <label>Vastagság
+                  <select data-complete-draft-variant="thickness">
+                    ${completeQuote.INSULATION_THICKNESSES.map((th) => `<option value="${th}" ${th === (draftVariant?.thicknessCm || 10) ? "selected" : ""}>${th} cm (${completeQuote.calculateAnchorLength(th)} mm dűbel)</option>`).join("")}
+                  </select>
+                </label>
+                <div class="actions align-end">
+                  <button type="button" class="button" data-action="apply-draft-variant">${icon("check")}Variáns alkalmazása</button>
+                </div>
+              </div>
+            </div>
+          ` : ""}
+          <div class="form-grid four">
+            <label class="field full">Tételszöveg<textarea data-complete-item-draft="description">${esc(item.description)}</textarea></label>
+            <label>Mennyiség<input type="number" min="0.001" step="0.001" data-complete-item-draft="quantity" value="${esc(item.quantity)}" /></label>
+            <label>Mértékegység<input list="complete-units" data-complete-item-draft="unit" value="${esc(item.unit)}" /><datalist id="complete-units">${completeQuote.UNITS.map((unit) => `<option value="${esc(unit)}"></option>`).join("")}</datalist></label>
+            <label>Anyag egységár (nettó)<input type="number" min="0" step="1" data-complete-item-draft="materialUnitNet" value="${esc(item.materialUnitNet)}" /></label>
+            <label>Munkadíj egységár (nettó)<input type="number" min="0" step="1" data-complete-item-draft="laborUnitNet" value="${esc(item.laborUnitNet)}" /></label>
+          </div>
+          <div class="calculation-strip">
+            <span>Anyag összesen <strong>${money(calculated.material)}</strong></span>
+            <span>Munkadíj összesen <strong>${money(calculated.labor)}</strong></span>
+            <span>Nettó sorösszeg <strong>${money(calculated.material + calculated.labor)}</strong></span>
+          </div>
+          <div class="actions">
+            <button class="button primary" data-action="save-complete-item">${icon("save")}Tétel mentése</button>
+            <button class="button" data-action="save-complete-template">${icon("layers")}Mentés új tételsablonként</button>
+            ${item.templateId ? `<button class="button" data-action="update-complete-template">${icon("edit")}Törzstétel frissítése</button>` : ""}
+            ${ui.selectedCompleteItemId ? `<button class="button danger" data-action="delete-complete-item">${icon("trash")}Tétel törlése</button>` : ""}
+          </div>
+        </div>
+      ` : ""}
     </section>
-    <section class="panel"><div class="panel-header"><div><h2 class="panel-title">Tételek</h2><p class="panel-note">${section.items.length} tétel · a mennyiség és az árak itt közvetlenül módosíthatók.</p></div></div><div class="table-wrap"><table class="complete-items-table complete-items-quick-table"><thead><tr><th>Ssz.</th><th>Tétel</th><th class="numeric">Menny.</th><th class="numeric">Anyag egységár</th><th class="numeric">Munkadíj egységár</th><th class="numeric">Nettó</th><th>Műveletek</th></tr></thead><tbody>${section.items.map((entry, index) => {
-      const totals = completeQuote.calculateItem(entry); return `<tr class="selectable ${entry.id === ui.selectedCompleteItemId ? "active" : ""}"><td>${index + 1}</td><td><strong>${esc(entry.description)}</strong><small>${esc(entry.unit)}</small></td><td class="numeric"><input aria-label="${esc(entry.description)} mennyiség" type="number" min="0.001" step="0.001" data-complete-inline-item="quantity" data-id="${esc(entry.id)}" value="${esc(entry.quantity)}" /></td><td class="numeric"><input aria-label="${esc(entry.description)} anyagár" type="number" min="0" step="1" data-complete-inline-item="materialUnitNet" data-id="${esc(entry.id)}" value="${esc(entry.materialUnitNet)}" /></td><td class="numeric"><input aria-label="${esc(entry.description)} munkadíj" type="number" min="0" step="1" data-complete-inline-item="laborUnitNet" data-id="${esc(entry.id)}" value="${esc(entry.laborUnitNet)}" /></td><td class="numeric"><strong>${money(totals.material + totals.labor)}</strong></td><td><div class="row-actions"><button class="button" data-action="select-complete-item" data-id="${esc(entry.id)}">${icon("edit")}Részletek</button><button class="button icon-only" data-action="move-complete-item" data-id="${esc(entry.id)}" data-direction="up" title="Fel">↑</button><button class="button icon-only" data-action="move-complete-item" data-id="${esc(entry.id)}" data-direction="down" title="Le">↓</button><button class="button icon-only" data-action="duplicate-complete-item" data-id="${esc(entry.id)}" title="Másolás">${icon("copy")}</button></div></td></tr>`;
-    }).join("") || `<tr><td colspan="7" class="empty">Még nincs tétel ebben a munkanemben.</td></tr>`}</tbody></table></div></section>
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Tételek</h2>
+          <p class="panel-note">${section.items.length} tétel · a mennyiség és az árak közvetlenül módosíthatók a táblázatban.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="complete-items-table complete-items-quick-table">
+          <thead>
+            <tr>
+              <th>Ssz.</th>
+              <th>Tétel</th>
+              <th class="numeric">Menny.</th>
+              <th class="numeric">Anyag egységár</th>
+              <th class="numeric">Munkadíj egységár</th>
+              <th class="numeric">Nettó</th>
+              <th>Műveletek</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${section.items.map((entry, index) => {
+              const totals = completeQuote.calculateItem(entry);
+              const insulationVariant = completeQuote.detectInsulationVariant(entry.description);
+              const drywallVariant = completeQuote.detectDrywallVariant(entry.description);
+              const paintingVariant = completeQuote.detectPaintingVariant(entry.description);
+              const tilingVariant = completeQuote.detectTilingVariant(entry.description);
+              return `<tr class="selectable ${entry.id === ui.selectedCompleteItemId ? "active" : ""}">
+                <td>${index + 1}</td>
+                <td>
+                  <strong>${esc(entry.description)}</strong>
+                  ${(() => {
+                    const template = catalog.itemTemplates.find((t) => t.id === entry.templateId || t.description === entry.description);
+                    const templateVariants = template?.variants || [];
+                    if (templateVariants.length > 0) {
+                      return `
+                        <div class="complete-item-variant-picker">
+                          <select data-complete-template-variant="${esc(entry.id)}" data-template-id="${esc(template.id)}" title="Alváltozat váltása">
+                            <option value="">-- Válassz változatot (${templateVariants.length} db) --</option>
+                            ${templateVariants.map((v) => `<option value="${esc(v.id)}" ${entry.description === v.description ? "selected" : ""}>${esc(v.label)} (${money(v.materialUnitNet)} + ${money(v.laborUnitNet)})</option>`).join("")}
+                          </select>
+                        </div>
+                      `;
+                    }
+                    if (insulationVariant) {
+                      return `
+                        <div class="complete-item-variant-picker">
+                          <select data-complete-item-variant="type" data-id="${esc(entry.id)}" title="Szigetelés típusa">
+                            ${completeQuote.INSULATION_TYPES.map((t) => `<option value="${t.id}" ${t.id === insulationVariant.typeId ? "selected" : ""}>${t.label}</option>`).join("")}
+                          </select>
+                          <select data-complete-item-variant="thickness" data-id="${esc(entry.id)}" title="Vastagság">
+                            ${completeQuote.INSULATION_THICKNESSES.map((th) => `<option value="${th}" ${th === insulationVariant.thicknessCm ? "selected" : ""}>${th} cm (${completeQuote.calculateAnchorLength(th)} mm dűbel)</option>`).join("")}
+                          </select>
+                        </div>
+                      `;
+                    }
+                    if (drywallVariant) {
+                      return `
+                        <div class="complete-item-variant-picker">
+                          <select data-complete-generic-variant="drywall" data-id="${esc(entry.id)}" title="Gipszkarton kivitel">
+                            ${completeQuote.DRYWALL_VARIANTS.map((v) => `<option value="${v.id}" ${v.id === drywallVariant.id ? "selected" : ""}>${v.label}</option>`).join("")}
+                          </select>
+                        </div>
+                      `;
+                    }
+                    if (paintingVariant) {
+                      return `
+                        <div class="complete-item-variant-picker">
+                          <select data-complete-generic-variant="painting" data-id="${esc(entry.id)}" title="Festés / glettelés kivitel">
+                            ${completeQuote.PAINTING_VARIANTS.map((v) => `<option value="${v.id}" ${v.id === paintingVariant.id ? "selected" : ""}>${v.label}</option>`).join("")}
+                          </select>
+                        </div>
+                      `;
+                    }
+                    if (tilingVariant) {
+                      return `
+                        <div class="complete-item-variant-picker">
+                          <select data-complete-generic-variant="tiling" data-id="${esc(entry.id)}" title="Burkolás / szintezés kivitel">
+                            ${completeQuote.TILING_VARIANTS.map((v) => `<option value="${v.id}" ${v.id === tilingVariant.id ? "selected" : ""}>${v.label}</option>`).join("")}
+                          </select>
+                        </div>
+                      `;
+                    }
+                    return "";
+                  })()}
+                </td>
+                <td class="numeric"><input aria-label="${esc(entry.description)} mennyiség" type="number" min="0.001" step="0.001" data-complete-inline-item="quantity" data-id="${esc(entry.id)}" value="${esc(entry.quantity)}" /></td>
+                <td class="numeric"><input aria-label="${esc(entry.description)} anyagár" type="number" min="0" step="1" data-complete-inline-item="materialUnitNet" data-id="${esc(entry.id)}" value="${esc(entry.materialUnitNet)}" /></td>
+                <td class="numeric"><input aria-label="${esc(entry.description)} munkadíj" type="number" min="0" step="1" data-complete-inline-item="laborUnitNet" data-id="${esc(entry.id)}" value="${esc(entry.laborUnitNet)}" /></td>
+                <td class="numeric"><strong>${money(totals.material + totals.labor)}</strong></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="button icon-only danger" data-action="delete-complete-table-item" data-id="${esc(entry.id)}" title="Tétel törlése">${icon("trash")}</button>
+                    <button class="button" data-action="select-complete-item" data-id="${esc(entry.id)}">${icon("edit")}Részletek</button>
+                    <button class="button icon-only" data-action="move-complete-item" data-id="${esc(entry.id)}" data-direction="up" title="Fel">↑</button>
+                    <button class="button icon-only" data-action="move-complete-item" data-id="${esc(entry.id)}" data-direction="down" title="Le">↓</button>
+                    <button class="button icon-only" data-action="duplicate-complete-item" data-id="${esc(entry.id)}" title="Másolás">${icon("copy")}</button>
+                  </div>
+                </td>
+              </tr>`;
+            }).join("") || `<tr><td colspan="7" class="empty">Még nincs tétel ebben a munkanemben. Kattints az „Alapcsomag betöltése” vagy „Új egyedi tétel” gombra.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function renderCompleteCatalogView() {
+  const catalog = completeCatalog();
+  const selectedCategoryId = ui.selectedCatalogCategoryId || catalog.categories[0]?.id || "";
+  const selectedCategory = catalog.categories.find((c) => c.id === selectedCategoryId) || catalog.categories[0];
+  const searchQuery = String(ui.catalogTemplateSearch || "").trim().toLowerCase();
+
+  const allTemplates = catalog.itemTemplates.filter((t) => t.categoryId === selectedCategory?.id);
+  const filteredTemplates = searchQuery
+    ? allTemplates.filter((t) => (t.name || "").toLowerCase().includes(searchQuery) || t.description.toLowerCase().includes(searchQuery) || (t.variants || []).some((v) => v.label.toLowerCase().includes(searchQuery)))
+    : allTemplates;
+
+  return `
+    <div class="master-catalog-layout">
+      <aside class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Munkanemek (${catalog.categories.length} db)</h2>
+            <p class="panel-note">Válassz szakágat a tételei és variánsai szerkesztéséhez.</p>
+          </div>
+        </div>
+        <div class="panel-body complete-category-list">
+          ${catalog.categories.map((cat) => {
+            const isSelected = cat.id === selectedCategory?.id;
+            const count = catalog.itemTemplates.filter((t) => t.categoryId === cat.id && t.active !== false).length;
+            return `
+              <div class="complete-category-row ${isSelected ? "selected" : ""}" style="grid-template-columns: 1fr;">
+                <button type="button" class="complete-category-tab-btn" data-action="select-catalog-category" data-id="${esc(cat.id)}">
+                  <span>${esc(cat.name)}${cat.kind === "incidental" ? ` <small>(járulékos)</small>` : ""}</span>
+                  <span class="badge count">${count} tétel</span>
+                </button>
+              </div>
+            `;
+          }).join("")}
+        </div>
+        <div class="panel-body complete-category-create">
+          <input data-catalog-new-category-name placeholder="Új munkanem neve" />
+          <button class="button" data-action="add-catalog-category">${icon("plus")}Hozzáadás</button>
+        </div>
+      </aside>
+
+      <main class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">${esc(selectedCategory?.name || "Törzsadatok")} tételei</h2>
+            <p class="panel-note">Itt szerkesztheted a listában megjelenő nevet, a teljes TERC specifikációt, az irányárakat és a lenyíló child variánsokat.</p>
+          </div>
+          <div class="actions">
+            <button class="button primary" data-action="new-catalog-template" data-category-id="${esc(selectedCategory?.id)}">${icon("plus")}Új tételsablon felvétele</button>
+          </div>
+        </div>
+
+        <div class="panel-body">
+          <div class="template-search-group" style="margin-bottom: 16px;">
+            <input type="search" class="complete-template-search-input" placeholder="Keresés a munkanem tételei és variánsai között…" value="${esc(ui.catalogTemplateSearch || "")}" data-catalog-template-search />
+            <div style="font-size: 13px; color: var(--muted); text-align: right;">${filteredTemplates.length} / ${allTemplates.length} tétel látható</div>
+          </div>
+
+          <div class="master-templates-list">
+            ${filteredTemplates.map((template, tIdx) => {
+              const variants = template.variants || [];
+              return `
+                <div class="master-template-card" data-template-card-id="${esc(template.id)}">
+                  <div class="master-template-header">
+                    <div>
+                      <span class="master-template-title">${esc(template.name || template.description?.split(",")[0] || `Tétel #${tIdx + 1}`)}</span>
+                      ${template.isStarterBundle ? `<span class="badge count" style="margin-left:8px; background:#e0f2fe; color:#0369a1;">⭐ Alapcsomag tagja</span>` : ""}
+                    </div>
+                    <div class="actions">
+                      <button class="button danger icon-only" data-action="delete-catalog-template" data-id="${esc(template.id)}" title="Sablon törlése">${icon("trash")}</button>
+                    </div>
+                  </div>
+
+                  <div class="form-grid four">
+                    <label class="field" style="grid-column: span 2;">Rövid név a listákhoz / keresőhöz
+                      <input type="text" data-template-edit-field="name" data-id="${esc(template.id)}" value="${esc(template.name || "")}" placeholder="pl. Homlokzati csőállványozás vagy Aljzatkiegyenlítés" />
+                    </label>
+                    <label>Mértékegység
+                      <input list="complete-units" data-template-edit-field="unit" data-id="${esc(template.id)}" value="${esc(template.unit || "db")}" />
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding-top:20px;">
+                      <input type="checkbox" data-template-edit-field="isStarterBundle" data-id="${esc(template.id)}" ${template.isStarterBundle ? "checked" : ""} />
+                      <span style="font-size:13px; font-weight:700;">Alapcsomag része</span>
+                    </label>
+                    <label class="field full">Teljes tételszöveg (TERC leírás)
+                      <textarea data-template-edit-field="description" data-id="${esc(template.id)}" style="min-height:75px;">${esc(template.description || "")}</textarea>
+                    </label>
+                    <label>Nettó anyag egységár (Ft)
+                      <input type="number" min="0" step="1" data-template-edit-field="materialUnitNet" data-id="${esc(template.id)}" value="${esc(template.materialUnitNet)}" />
+                    </label>
+                    <label>Nettó munkadíj egységár (Ft)
+                      <input type="number" min="0" step="1" data-template-edit-field="laborUnitNet" data-id="${esc(template.id)}" value="${esc(template.laborUnitNet)}" />
+                    </label>
+                    <div class="actions align-end" style="grid-column: span 2;">
+                      <button class="button primary" data-action="save-catalog-template" data-id="${esc(template.id)}">${icon("save")}Törzstétel mentése</button>
+                    </div>
+                  </div>
+
+                  <div class="master-variants-section">
+                    <div class="master-variants-header">
+                      <span>${icon("layers")} Lenyíló alváltozatok (Child tételek) · ${variants.length} db</span>
+                      <div class="actions">
+                        ${template.description.toLowerCase().includes("hőszig") || template.name.toLowerCase().includes("hőszig") || template.description.toLowerCase().includes("lábazat") ? `
+                          <button type="button" class="button" data-action="generate-insulation-variants" data-template-id="${esc(template.id)}" title="Alapértelmezett szabványos vastagságok (5-20cm, dűbel, árak) generálása">${icon("layers")}Szigetelés variánsok generálása</button>
+                        ` : ""}
+                        <button type="button" class="button" data-action="add-catalog-variant" data-template-id="${esc(template.id)}">${icon("plus")}Új alváltozat</button>
+                      </div>
+                    </div>
+                    ${variants.length ? `
+                      <table class="master-variant-table">
+                        <thead>
+                          <tr>
+                            <th style="width: 25%;">Variáns neve (lenyílóban)</th>
+                            <th style="width: 40%;">Egyedi tételszöveg</th>
+                            <th style="width: 10%;">Egység</th>
+                            <th style="width: 10%;">Anyagár</th>
+                            <th style="width: 10%;">Munkadíj</th>
+                            <th style="width: 5%;"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${variants.map((v, vIdx) => `
+                            <tr>
+                              <td><input type="text" data-variant-edit-field="label" data-template-id="${esc(template.id)}" data-variant-index="${vIdx}" value="${esc(v.label)}" placeholder="pl. 10 cm vastag (180mm dűbel)" /></td>
+                              <td><textarea data-variant-edit-field="description" data-template-id="${esc(template.id)}" data-variant-index="${vIdx}" style="min-height:45px;">${esc(v.description)}</textarea></td>
+                              <td><input type="text" data-variant-edit-field="unit" data-template-id="${esc(template.id)}" data-variant-index="${vIdx}" value="${esc(v.unit || template.unit || "m²")}" /></td>
+                              <td><input type="number" min="0" step="1" data-variant-edit-field="materialUnitNet" data-template-id="${esc(template.id)}" data-variant-index="${vIdx}" value="${esc(v.materialUnitNet)}" /></td>
+                              <td><input type="number" min="0" step="1" data-variant-edit-field="laborUnitNet" data-template-id="${esc(template.id)}" data-variant-index="${vIdx}" value="${esc(v.laborUnitNet)}" /></td>
+                              <td><button type="button" class="button danger icon-only" data-action="delete-catalog-variant" data-template-id="${esc(template.id)}" data-variant-index="${vIdx}" title="Variáns törlése">${icon("trash")}</button></td>
+                            </tr>
+                          `).join("")}
+                        </tbody>
+                      </table>
+                    ` : `<p style="font-size:12px; color:var(--muted); margin:4px 0 0 0;">Ehhez a tételhez még nincsenek felvéve alváltozatok. Kattints az „Új alváltozat” gombra, ha pl. különböző magasságokat, vastagságokat vagy rétegeket szeretnél kínálni.</p>`}
+                  </div>
+                </div>
+              `;
+            }).join("") || `<div class="empty">Ebben a munkanemben még nincs sablon. Kattints a fenti „Új tételsablon felvétele” gombra.</div>`}
+          </div>
+        </div>
+      </main>
+    </div>
   `;
 }
 
@@ -3185,6 +3615,21 @@ function renderSettingsView() {
       <section class="panel">
         <div class="panel-header">
           <div>
+            <h2 class="panel-title">Komplett ajánlat törzsadatok & sablonok</h2>
+            <p class="panel-note">Itt testreszabhatod a munkanemeket, a TERC tételszövegeket, az alváltozatokat és az alapcsomagokat.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <p style="font-size: 13px; color: var(--ink); margin-bottom: 12px;">Szerkesztheted az egyes szakágak alapértelmezett tételeit, a lenyíló variánsok (child tételek) szövegét és irányárait.</p>
+          <div class="actions" style="justify-content: flex-start;">
+            <button class="button primary" data-view="complete-catalog">${icon("database")}Komplett törzsadatok megnyitása</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
             <h2 class="panel-title">Adatmentés</h2>
             <p class="panel-note">A teljes helyi adatbázis JSON fájlba menthető és visszatölthető.</p>
           </div>
@@ -3261,6 +3706,7 @@ function renderCompletePrintSheet(quote) {
       ${totals.sections.map((section) => `
         <section class="complete-print-page complete-print-detail-page">
           <h2>${esc(section.name)}</h2>
+          ${section.note ? `<p class="complete-print-section-note" style="margin: 2px 0 8px 0; font-size: 11px; font-style: italic; color: #555;">Megjegyzés: ${esc(section.note)}</p>` : ""}
           <table class="complete-print-items"><thead><tr><th>Ssz.</th><th>Tétel szövege</th><th>Menny.</th><th>Egység</th><th>Anyag egységár</th><th>Munkadíj egységár</th><th>Anyag összesen</th><th>Munkadíj összesen</th></tr></thead><tbody>
             ${section.items.map((item, index) => { const itemTotals = completeQuote.calculateItem(item); return `<tr><td>${index + 1}</td><td>${esc(item.description)}</td><td>${number(item.quantity)}</td><td>${esc(item.unit)}</td><td>${money(item.materialUnitNet)}</td><td>${money(item.laborUnitNet)}</td><td>${money(itemTotals.material)}</td><td>${money(itemTotals.labor)}</td></tr>`; }).join("") || `<tr><td colspan="8">Nincs tétel ebben a munkanemben.</td></tr>`}
             <tr class="strong"><td colspan="6">Munkanem összesen</td><td>${money(section.totals.material)}</td><td>${money(section.totals.labor)}</td></tr>
@@ -3355,8 +3801,14 @@ function renderPrintItem(item, quote, index) {
 function handleClick(event) {
   const viewButton = event.target.closest("[data-view]");
   if (viewButton) {
-    ui.view = viewButton.dataset.view;
+    const targetView = viewButton.dataset.view;
+    ui.view = targetView;
     ui.customerPresentationMode = false;
+    if (targetView === "complete-quotes" || targetView === "complete-quote-editor" || targetView === "complete-catalog") {
+      ui.activeModule = "construction";
+    } else if (targetView === "quotes" || targetView === "quote-editor" || targetView === "profiles" || targetView === "interior" || targetView === "matrices" || targetView === "extras") {
+      ui.activeModule = "openings";
+    }
     render();
     return;
   }
@@ -3367,6 +3819,24 @@ function handleClick(event) {
   const id = actionButton.dataset.id;
   const collection = actionButton.dataset.collection;
 
+  if (action === "toggle-sidebar") {
+    ui.sidebarCollapsed = !ui.sidebarCollapsed;
+    render();
+    return;
+  }
+
+  if (action === "switch-module") {
+    const mod = actionButton.dataset.module;
+    ui.activeModule = mod;
+    if (mod === "construction") {
+      ui.view = "complete-quotes";
+    } else {
+      ui.view = "quotes";
+    }
+    render();
+    return;
+  }
+
   if (action === "select-quote") selectQuote(id);
   if (action === "new-quote") newQuote();
   if (action === "new-complete-quote") newCompleteQuote();
@@ -3376,6 +3846,18 @@ function handleClick(event) {
   if (action === "duplicate-complete-quote") duplicateCompleteQuote();
   if (action === "set-complete-status") setCompleteQuoteStatus(id || ui.selectedCompleteQuoteId, actionButton.dataset.status);
   if (action === "select-complete-section") selectCompleteSection(id);
+  if (action === "open-or-toggle-category") openOrToggleCategory(actionButton.dataset.categoryId);
+  if (action === "select-catalog-category") selectCatalogCategory(id);
+  if (action === "add-catalog-category") addCatalogCategory();
+  if (action === "new-catalog-template") newCatalogTemplate(actionButton.dataset.categoryId);
+  if (action === "save-catalog-template") saveCatalogTemplate(id);
+  if (action === "delete-catalog-template") deleteCatalogTemplate(id);
+  if (action === "add-catalog-variant") addCatalogVariant(actionButton.dataset.templateId);
+  if (action === "delete-catalog-variant") deleteCatalogVariant(actionButton.dataset.templateId, Number(actionButton.dataset.variantIndex));
+  if (action === "generate-insulation-variants") generateTemplateInsulationVariants(actionButton.dataset.templateId);
+  if (action === "quick-add-customer") quickAddCustomer();
+  if (action === "load-complete-bundle") loadCompleteBundle(id);
+  if (action === "apply-draft-variant") applyDraftVariant();
   if (action === "add-complete-category") addCompleteCategory();
   if (action === "archive-complete-category") archiveCompleteCategory(id);
   if (action === "move-complete-section") moveCompleteSection(id, actionButton.dataset.direction);
@@ -3386,6 +3868,7 @@ function handleClick(event) {
   if (action === "move-complete-item") moveCompleteItem(id, actionButton.dataset.direction);
   if (action === "duplicate-complete-item") duplicateCompleteItem(id);
   if (action === "delete-complete-item") deleteCompleteItem();
+  if (action === "delete-complete-table-item") deleteCompleteTableItem(id);
   if (action === "save-complete-template") saveCompleteTemplate();
   if (action === "update-complete-template") updateCompleteTemplate();
   if (action === "archive-complete-template") archiveCompleteTemplate(id);
@@ -3446,6 +3929,10 @@ function handleInput(event) {
     stageCompleteQuoteField(target.dataset.bindCompleteQuote, target.value);
     return;
   }
+  if (target.dataset.completeSectionNote !== undefined) {
+    updateCompleteSectionNote(target.dataset.completeSectionNote, target.value);
+    return;
+  }
   if (target.dataset.completeItemDraft) {
     updateCompleteItemDraft(target.dataset.completeItemDraft, target.value);
     return;
@@ -3457,6 +3944,16 @@ function handleInput(event) {
   if (target.dataset.completeSearch !== undefined) {
     ui.completeSearch = target.value;
     render();
+    return;
+  }
+  if (target.dataset.completeTemplateSearch !== undefined) {
+    ui.completeTemplateSearch = target.value;
+    render();
+    const searchInput = document.querySelector(".complete-template-search-input");
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+    }
     return;
   }
   if (target.dataset.bindItem) {
@@ -3537,6 +4034,16 @@ function handleInput(event) {
     saveState();
     return;
   }
+  if (target.dataset.catalogTemplateSearch !== undefined) {
+    ui.catalogTemplateSearch = target.value;
+    render();
+    const searchInput = document.querySelector("[data-catalog-template-search]");
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+    }
+    return;
+  }
   if (target.dataset.matrixCell) {
     const matrix = getSelectedMatrix();
     matrix.prices[target.dataset.matrixCell] = Number(target.value || 0);
@@ -3565,6 +4072,28 @@ function handleChange(event) {
     toggleCompleteCategory(target.dataset.completeCategoryToggle, target.checked);
     return;
   }
+  if (target.dataset.completeItemVariant) {
+    const row = target.closest("tr");
+    const typeSelect = row?.querySelector('[data-complete-item-variant="type"]');
+    const thicknessSelect = row?.querySelector('[data-complete-item-variant="thickness"]');
+    changeCompleteItemVariant(target.dataset.id, typeSelect?.value, thicknessSelect?.value);
+    return;
+  }
+  if (target.dataset.completeGenericVariant) {
+    changeCompleteGenericVariant(target.dataset.id, target.dataset.completeGenericVariant, target.value);
+    return;
+  }
+  if (target.dataset.completeTemplateVariant) {
+    changeCompleteTemplateVariant(target.dataset.completeTemplateVariant, target.dataset.templateId, target.value);
+    return;
+  }
+  if (target.dataset.completeDraftVariant) {
+    const form = target.closest(".complete-item-form");
+    const typeSelect = form?.querySelector('[data-complete-draft-variant="type"]');
+    const thicknessSelect = form?.querySelector('[data-complete-draft-variant="thickness"]');
+    applyDraftVariant(typeSelect?.value, thicknessSelect?.value);
+    return;
+  }
   if (target.dataset.completeTemplateId !== undefined) {
     addCompleteTemplateItem(target.value);
     return;
@@ -3579,6 +4108,8 @@ function handleChange(event) {
   }
   if (target.dataset.completeExportStyle !== undefined) {
     ui.completeExportStyle = target.value === "classic" ? "classic" : "modern";
+    saveState();
+    render();
     return;
   }
   if (target.dataset.completeStatus !== undefined) {
@@ -3884,7 +4415,15 @@ async function toggleCompleteCategory(categoryId, checked) {
   if (!quote || !category) return;
   const existingIndex = quote.sections.findIndex((section) => section.categoryId === categoryId);
   if (checked && existingIndex < 0) {
-    quote.sections.push({ id: completeUid("section"), categoryId: category.id, name: category.name, kind: category.kind, position: quote.sections.length, items: [] });
+    const starterItems = completeQuote.createStarterBundleItems(category.id, completeCatalog());
+    quote.sections.push({
+      id: completeUid("section"),
+      categoryId: category.id,
+      name: category.name,
+      kind: category.kind,
+      position: quote.sections.length,
+      items: starterItems
+    });
   }
   if (!checked && existingIndex >= 0) {
     if (quote.sections[existingIndex].items.length) {
@@ -3901,6 +4440,293 @@ async function toggleCompleteCategory(categoryId, checked) {
   touchCompleteQuote(quote);
   await persistCompleteQuote(quote);
   render();
+}
+
+async function loadCompleteBundle(sectionId) {
+  const quote = getSelectedCompleteQuote();
+  const section = quote?.sections.find((item) => item.id === (sectionId || ui.selectedCompleteSectionId));
+  if (!quote || !section) return;
+  const bundleItems = completeQuote.createStarterBundleItems(section.categoryId, completeCatalog());
+  if (!bundleItems.length) {
+    showToast("Ehhez a munkanemhez nincs előre definiált alaptétel.");
+    return;
+  }
+  const startPos = section.items.length;
+  bundleItems.forEach((item, idx) => {
+    item.position = startPos + idx;
+    section.items.push(item);
+  });
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+  showToast(`${bundleItems.length} db alaptétel betöltve a munkanembe.`);
+}
+
+async function changeCompleteItemVariant(itemId, typeId, thicknessCm) {
+  const quote = getSelectedCompleteQuote();
+  const section = activeCompleteSection(quote);
+  const item = section?.items.find((entry) => entry.id === itemId);
+  if (!quote || !item) return;
+  const current = completeQuote.detectInsulationVariant(item.description) || { typeId: "eps_white", thicknessCm: 10 };
+  const targetType = typeId || current.typeId;
+  const targetThickness = Number(thicknessCm || current.thicknessCm);
+  const updated = completeQuote.applyInsulationVariant(item, targetType, targetThickness);
+  item.description = updated.description;
+  item.unit = updated.unit;
+  item.materialUnitNet = updated.materialUnitNet;
+  item.laborUnitNet = updated.laborUnitNet;
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+  showToast(`Szigetelés módosítva: ${targetThickness} cm`);
+}
+
+async function deleteCompleteTableItem(itemId) {
+  const quote = getSelectedCompleteQuote();
+  const section = activeCompleteSection(quote);
+  if (!quote || !section) return;
+  const index = section.items.findIndex((item) => item.id === itemId);
+  if (index < 0) return;
+  section.items.splice(index, 1);
+  section.items.forEach((item, pos) => { item.position = pos; });
+  if (ui.selectedCompleteItemId === itemId) {
+    ui.selectedCompleteItemId = "";
+    ui.completeItemEditorOpen = false;
+  }
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+  showToast("Tétel törölve a munkanemből.");
+}
+
+async function changeCompleteGenericVariant(itemId, variantType, variantId) {
+  const quote = getSelectedCompleteQuote();
+  const section = activeCompleteSection(quote);
+  const item = section?.items.find((entry) => entry.id === itemId);
+  if (!quote || !item) return;
+
+  let variantList = [];
+  if (variantType === "drywall") variantList = completeQuote.DRYWALL_VARIANTS;
+  else if (variantType === "painting") variantList = completeQuote.PAINTING_VARIANTS;
+  else if (variantType === "tiling") variantList = completeQuote.TILING_VARIANTS;
+
+  const matched = variantList.find((v) => v.id === variantId);
+  if (!matched) return;
+
+  const updated = completeQuote.applyItemVariant(item, matched);
+  item.description = updated.description;
+  item.unit = updated.unit;
+  item.materialUnitNet = updated.materialUnitNet;
+  item.laborUnitNet = updated.laborUnitNet;
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+  showToast(`Tétel frissítve: ${matched.label}`);
+}
+
+function updateCompleteSectionNote(sectionId, value) {
+  const quote = getSelectedCompleteQuote();
+  const section = quote?.sections.find((s) => s.id === sectionId);
+  if (!quote || !section) return;
+  section.note = value;
+  touchCompleteQuote(quote);
+  persistCompleteQuote(quote);
+}
+
+async function quickAddCustomer() {
+  const name = window.prompt("Új ügyfél neve:")?.trim();
+  if (!name) return;
+  const address = window.prompt("Ügyfél címe (munkavégzés helye):")?.trim() || "";
+  const phone = window.prompt("Telefonszám (opcionális):")?.trim() || "";
+  const customer = {
+    id: `customer-${Date.now().toString(36)}`,
+    name,
+    address,
+    phone,
+    email: ""
+  };
+  state.customers.push(customer);
+  const quote = getSelectedCompleteQuote();
+  if (quote) {
+    quote.customerId = customer.id;
+    if (address && !quote.projectAddress) quote.projectAddress = address;
+    touchCompleteQuote(quote);
+    await persistCompleteQuote(quote);
+  }
+  const result = await window.nyilaszaroApp?.data?.upsertCustomer?.(clone(customer));
+  if (result?.state) syncStateFromMutation(result, { view: "complete-quote-editor", selectedCompleteQuoteId: ui.selectedCompleteQuoteId });
+  else saveState();
+  render();
+  showToast(`"${name}" ügyfél felvéve és kiválasztva.`);
+}
+
+function selectCatalogCategory(categoryId) {
+  ui.selectedCatalogCategoryId = categoryId;
+  ui.catalogTemplateSearch = "";
+  render();
+}
+
+async function addCatalogCategory() {
+  const input = document.querySelector("[data-catalog-new-category-name]");
+  const name = String(input?.value || "").trim();
+  if (!name) {
+    showToast("Add meg az új munkanem nevét.");
+    return;
+  }
+  const catalog = completeCatalog();
+  if (catalog.categories.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
+    showToast("Ilyen munkanem már létezik.");
+    return;
+  }
+  const category = {
+    id: `complete-category-${Date.now().toString(36)}`,
+    name,
+    kind: "regular",
+    position: catalog.categories.length,
+    active: true
+  };
+  catalog.categories.push(category);
+  ui.selectedCatalogCategoryId = category.id;
+  const result = await window.nyilaszaroApp?.data?.upsertCompleteCategory?.(clone(category));
+  if (result?.state) syncStateFromMutation(result, { view: "complete-catalog", selectedCatalogCategoryId: category.id });
+  else saveState();
+  render();
+  showToast(`"${name}" munkanem létrehozva.`);
+}
+
+async function newCatalogTemplate(categoryId) {
+  const catalog = completeCatalog();
+  const template = {
+    id: `complete-template-${Date.now().toString(36)}`,
+    categoryId: categoryId || ui.selectedCatalogCategoryId || catalog.categories[0]?.id || "",
+    name: "Új sablon tétel",
+    description: "Új tétel részletes specifikációja és leírása...",
+    unit: "m²",
+    materialUnitNet: 0,
+    laborUnitNet: 0,
+    isStarterBundle: false,
+    variants: [],
+    active: true
+  };
+  catalog.itemTemplates.unshift(template);
+  const result = await window.nyilaszaroApp?.data?.upsertCompleteTemplate?.(clone(template));
+  if (result?.state) syncStateFromMutation(result, { view: "complete-catalog", selectedCatalogCategoryId: template.categoryId });
+  else saveState();
+  render();
+  showToast("Új tételsablon létrehozva.");
+}
+
+async function saveCatalogTemplate(templateId) {
+  const card = document.querySelector(`[data-template-card-id="${templateId}"]`);
+  if (!card) return;
+  const catalog = completeCatalog();
+  const template = catalog.itemTemplates.find((t) => t.id === templateId);
+  if (!template) return;
+
+  const nameInput = card.querySelector('[data-template-edit-field="name"]');
+  const descInput = card.querySelector('[data-template-edit-field="description"]');
+  const unitInput = card.querySelector('[data-template-edit-field="unit"]');
+  const matInput = card.querySelector('[data-template-edit-field="materialUnitNet"]');
+  const labInput = card.querySelector('[data-template-edit-field="laborUnitNet"]');
+  const bundleInput = card.querySelector('[data-template-edit-field="isStarterBundle"]');
+
+  template.name = String(nameInput?.value || "").trim();
+  template.description = String(descInput?.value || "").trim();
+  template.unit = String(unitInput?.value || "db").trim();
+  template.materialUnitNet = Number(matInput?.value || 0);
+  template.laborUnitNet = Number(labInput?.value || 0);
+  template.isStarterBundle = Boolean(bundleInput?.checked);
+
+  // Collect variants
+  const variantRows = card.querySelectorAll(".master-variant-table tbody tr");
+  template.variants = Array.from(variantRows).map((row, idx) => {
+    const vLabel = row.querySelector('[data-variant-edit-field="label"]')?.value || `Variáns ${idx + 1}`;
+    const vDesc = row.querySelector('[data-variant-edit-field="description"]')?.value || template.description;
+    const vUnit = row.querySelector('[data-variant-edit-field="unit"]')?.value || template.unit;
+    const vMat = Number(row.querySelector('[data-variant-edit-field="materialUnitNet"]')?.value || template.materialUnitNet);
+    const vLab = Number(row.querySelector('[data-variant-edit-field="laborUnitNet"]')?.value || template.laborUnitNet);
+    const existing = template.variants?.[idx];
+    return {
+      id: existing?.id || `var-${Date.now().toString(36)}-${idx}`,
+      label: vLabel.trim(),
+      description: vDesc.trim(),
+      unit: vUnit.trim(),
+      materialUnitNet: vMat,
+      laborUnitNet: vLab
+    };
+  });
+
+  const result = await window.nyilaszaroApp?.data?.upsertCompleteTemplate?.(clone(template));
+  if (result?.state) syncStateFromMutation(result, { view: "complete-catalog", selectedCatalogCategoryId: template.categoryId });
+  else saveState();
+  render();
+  showToast(`"${template.name || "Törzstétel"}" sikeresen mentve.`);
+}
+
+async function deleteCatalogTemplate(templateId) {
+  const catalog = completeCatalog();
+  const index = catalog.itemTemplates.findIndex((t) => t.id === templateId);
+  if (index < 0) return;
+  const removed = catalog.itemTemplates.splice(index, 1)[0];
+  const result = await window.nyilaszaroApp?.data?.archiveCompleteTemplate?.(templateId);
+  if (result?.state) syncStateFromMutation(result, { view: "complete-catalog", selectedCatalogCategoryId: ui.selectedCatalogCategoryId });
+  else saveState();
+  render();
+  showToast(`"${removed.name || "Tétel"}" törölve a törzsből.`);
+}
+
+function addCatalogVariant(templateId) {
+  const catalog = completeCatalog();
+  const template = catalog.itemTemplates.find((t) => t.id === templateId);
+  if (!template) return;
+  template.variants = template.variants || [];
+  template.variants.push({
+    id: `var-${Date.now().toString(36)}-${template.variants.length + 1}`,
+    label: `Új alváltozat ${template.variants.length + 1}`,
+    description: template.description || "",
+    unit: template.unit || "m²",
+    materialUnitNet: template.materialUnitNet || 0,
+    laborUnitNet: template.laborUnitNet || 0
+  });
+  render();
+}
+
+function deleteCatalogVariant(templateId, variantIndex) {
+  const catalog = completeCatalog();
+  const template = catalog.itemTemplates.find((t) => t.id === templateId);
+  if (!template || !template.variants) return;
+  template.variants.splice(variantIndex, 1);
+  render();
+}
+
+function generateTemplateInsulationVariants(templateId) {
+  const catalog = completeCatalog();
+  const template = catalog.itemTemplates.find((t) => t.id === templateId);
+  if (!template) return;
+  const isPlinth = template.description.toLowerCase().includes("lábazat") || template.name.toLowerCase().includes("lábazat") || template.description.toLowerCase().includes("xps");
+  template.variants = completeQuote.generateStandardInsulationVariants(isPlinth ? "plinth" : "facade");
+  saveCatalogTemplate(templateId);
+  showToast(`Szigetelés vastagság- és típusvariánsok legenerálva (${template.variants.length} db).`);
+}
+
+async function changeCompleteTemplateVariant(itemId, templateId, variantId) {
+  const quote = getSelectedCompleteQuote();
+  const section = activeCompleteSection(quote);
+  const item = section?.items.find((entry) => entry.id === itemId);
+  if (!quote || !item) return;
+  const catalog = completeCatalog();
+  const template = catalog.itemTemplates.find((t) => t.id === templateId);
+  const variant = template?.variants?.find((v) => v.id === variantId);
+  if (!variant) return;
+
+  item.description = variant.description || item.description;
+  item.unit = variant.unit || item.unit;
+  item.materialUnitNet = Number.isFinite(variant.materialUnitNet) ? variant.materialUnitNet : item.materialUnitNet;
+  item.laborUnitNet = Number.isFinite(variant.laborUnitNet) ? variant.laborUnitNet : item.laborUnitNet;
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+  showToast(`Alváltozat kiválasztva: ${variant.label}`);
 }
 
 async function addCompleteCategory() {
@@ -3935,6 +4761,21 @@ async function archiveCompleteCategory(id) {
   showToast("Munkanem archiválva; a régi ajánlatokban változatlanul megmarad.");
 }
 
+async function openOrToggleCategory(categoryId) {
+  const quote = getSelectedCompleteQuote();
+  if (!quote) return;
+  const existingSection = quote.sections.find((s) => s.categoryId === categoryId);
+  if (existingSection) {
+    ui.selectedCompleteSectionId = existingSection.id;
+    ui.selectedCompleteItemId = "";
+    ui.completeItemEditorOpen = false;
+    ui.completeTemplateSearch = "";
+    render();
+  } else {
+    await toggleCompleteCategory(categoryId, true);
+  }
+}
+
 function selectCompleteSection(id) {
   const quote = getSelectedCompleteQuote();
   const section = quote?.sections.find((item) => item.id === id);
@@ -3942,7 +4783,7 @@ function selectCompleteSection(id) {
   ui.selectedCompleteSectionId = section.id;
   ui.selectedCompleteItemId = "";
   ui.completeItemEditorOpen = false;
-  ui.completeItemDraft = completeQuote.createItem();
+  ui.completeTemplateSearch = "";
   render();
 }
 
