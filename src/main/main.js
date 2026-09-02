@@ -50,6 +50,12 @@ app.whenReady().then(() => {
   ipcMain.handle(DATA_CHANNELS.DELETE_CUSTOMER, (_event, id) => dataAdapter.deleteCustomer(id));
   ipcMain.handle(DATA_CHANNELS.UPSERT_QUOTE, (_event, quote) => dataAdapter.upsertQuote(quote));
   ipcMain.handle(DATA_CHANNELS.DELETE_QUOTE, (_event, id) => dataAdapter.deleteQuote(id));
+  ipcMain.handle(DATA_CHANNELS.UPSERT_COMPLETE_QUOTE, (_event, quote) => dataAdapter.upsertCompleteQuote(quote));
+  ipcMain.handle(DATA_CHANNELS.DELETE_COMPLETE_QUOTE, (_event, id) => dataAdapter.deleteCompleteQuote(id));
+  ipcMain.handle(DATA_CHANNELS.UPSERT_COMPLETE_CATEGORY, (_event, category) => dataAdapter.upsertCompleteCategory(category));
+  ipcMain.handle(DATA_CHANNELS.ARCHIVE_COMPLETE_CATEGORY, (_event, id) => dataAdapter.archiveCompleteCategory(id));
+  ipcMain.handle(DATA_CHANNELS.UPSERT_COMPLETE_TEMPLATE, (_event, template) => dataAdapter.upsertCompleteTemplate(template));
+  ipcMain.handle(DATA_CHANNELS.ARCHIVE_COMPLETE_TEMPLATE, (_event, id) => dataAdapter.archiveCompleteTemplate(id));
   registerPdfHandlers();
   createMainWindow();
 
@@ -141,8 +147,11 @@ async function runPdfSmoke(window) {
   const results = [];
 
   for (const mode of modes) {
-    const normalizedMode = mode === "internal" ? "internal" : "customer";
-    const prepared = await window.webContents.executeJavaScript(`window.nyilaszaroSmoke.preparePrint(${JSON.stringify(normalizedMode)})`);
+    const isComplete = mode === "complete-classic" || mode === "complete-modern";
+    const normalizedMode = isComplete ? mode : (mode === "internal" ? "internal" : "customer");
+    const prepared = isComplete
+      ? await window.webContents.executeJavaScript(`window.nyilaszaroSmoke.prepareCompletePrint(${JSON.stringify(mode.replace("complete-", ""))})`)
+      : await window.webContents.executeJavaScript(`window.nyilaszaroSmoke.preparePrint(${JSON.stringify(normalizedMode)})`);
     const buffer = await window.webContents.printToPDF({
       printBackground: true,
       pageSize: "A4",
@@ -169,7 +178,7 @@ async function runPdfSmoke(window) {
   });
 
   await window.webContents.executeJavaScript(`(() => {
-    document.body.classList.remove("print-internal", "print-customer");
+    document.body.classList.remove("print-internal", "print-customer", "print-complete", "print-complete-classic", "print-complete-modern");
     window.nyilaszaroSmoke.preparePrint("customer");
   })()`);
 

@@ -48,6 +48,7 @@ function renderApp(search, afterRenderScript = "") {
 
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(root, "src/shared/pricing-calculations.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(root, "src/shared/complete-quote-calculations.js"), "utf8"), context);
   vm.runInContext(fs.readFileSync(path.join(root, "src/shared/matrix-import.js"), "utf8"), context);
   vm.runInContext(fs.readFileSync(path.join(root, "src/renderer/app.js"), "utf8"), context);
   if (afterRenderScript) vm.runInContext(afterRenderScript, context);
@@ -57,13 +58,16 @@ function renderApp(search, afterRenderScript = "") {
 test("renderer index loads shared pricing before app", () => {
   const html = fs.readFileSync(path.join(root, "src/renderer/index.html"), "utf8");
   const pricingIndex = html.indexOf("../shared/pricing-calculations.js");
+  const completeQuoteIndex = html.indexOf("../shared/complete-quote-calculations.js");
   const matrixImportIndex = html.indexOf("../shared/matrix-import.js");
   const appIndex = html.indexOf("app.js");
 
   assert(pricingIndex > -1, "pricing module script is missing");
+  assert(completeQuoteIndex > -1, "complete quote module script is missing");
   assert(matrixImportIndex > -1, "matrix import module script is missing");
   assert(appIndex > -1, "app script is missing");
   assert(pricingIndex < appIndex, "pricing module must load before app.js");
+  assert(completeQuoteIndex < appIndex, "complete quote module must load before app.js");
   assert(matrixImportIndex < appIndex, "matrix import module must load before app.js");
 });
 
@@ -100,6 +104,38 @@ test("quotes dashboard renders workflow filters and version metadata", () => {
   assert(html.includes("Verzió"));
   assert(html.includes("v1"));
   assert(html.includes("Kezdő állapot"));
+});
+
+test("complete quote editor renders category selection, templates and both PDF styles", () => {
+  const html = renderApp("?mode=demo", `
+    (() => {
+      const category = completeCatalog().categories.find((item) => item.name === "Hőszigetelés");
+      state.completeQuotes = [completeQuote.normalizeQuote({
+        id: "complete-render-1", number: "TZG-2026-0001", customerId: state.customers[0].id,
+        projectAddress: "Budapest, Minta utca 1.", workDescription: "Homlokzat hőszigetelés", createdAt: "2026-08-28", validityDays: 15, vat: 27,
+        sections: [{ id: "section-render-1", categoryId: category.id, name: category.name, kind: category.kind, position: 0, items: [{ id: "item-render-1", description: "EPS rendszer", quantity: 10.5, unit: "m²", materialUnitNet: 3000, laborUnitNet: 1500, position: 0 }] }]
+      })];
+      ui.selectedCompleteQuoteId = "complete-render-1";
+      ui.selectedCompleteSectionId = "section-render-1";
+      ui.selectedCompleteItemId = "item-render-1";
+      ui.completeItemEditorOpen = true;
+      ui.completeItemDraft = clone(state.completeQuotes[0].sections[0].items[0]);
+      ui.view = "complete-quote-editor";
+      render();
+    })();
+  `);
+
+  assert(html.includes("data-complete-category-toggle"));
+  assert(html.includes("data-complete-template-id"));
+  assert(html.includes("EPS rendszer"));
+  assert(html.includes("Classic - táblázatos"));
+  assert(html.includes("Modern - TZG"));
+  assert(html.includes("data-action=\"save-complete-template\""));
+  assert(html.includes("data-action=\"archive-complete-template\""));
+  assert(html.includes("data-action=\"move-complete-item\""));
+  assert(html.includes("data-action=\"duplicate-complete-item\""));
+  assert(html.includes("data-complete-inline-item=\"quantity\""));
+  assert(html.includes("data-action=\"export-complete-quote\""));
 });
 
 test("plastic catalog setup renders matrix coverage overview", () => {

@@ -146,6 +146,10 @@ Rovid tavon Electron `printToPDF` hasznalhato, mert kozel all a mostani nyomtata
 - felmeresi lap
 - gyartoi/megrendelesi osszesito
 
+### Komplett ajanlat keszites
+
+A kulon komplett ajanlat modul ugyanazt az ugyfel- es cegtorzset hasznalja, de sajat `TZG-EV-SORSZAM` szamozast, munkanem-pillanatkepeket es tetelkatalogust kap. A reszletes mukodesi es PDF-szerzodes: [Komplett ajanlat keszites](COMPLETE_QUOTE_MODULE.md).
+
 ## Biztonsagi alapelvek Electronban
 
 - `contextIsolation: true`

@@ -23,6 +23,9 @@ const CRM_CAPABILITIES = Object.freeze([
   "quotes.statusHistory",
   "quotes.pdf.customer",
   "quotes.pdf.internal",
+  "completeQuotes.read",
+  "completeQuotes.write",
+  "completeQuotes.pdf",
   "catalog.read",
   "sync.queue"
 ]);

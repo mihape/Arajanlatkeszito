@@ -1,4 +1,4 @@
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const syncColumns = `
   external_id TEXT,
@@ -189,6 +189,70 @@ const MIGRATIONS = [
         last_error TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
+      )`
+    ]
+  },
+  {
+    version: 2,
+    name: "complete-quote-module",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS complete_quote_categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'regular',
+        position INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        ${syncColumns}
+      )`,
+      `CREATE TABLE IF NOT EXISTS complete_quote_templates (
+        id TEXT PRIMARY KEY,
+        category_id TEXT,
+        description TEXT NOT NULL,
+        unit TEXT NOT NULL,
+        material_unit_net REAL NOT NULL DEFAULT 0,
+        labor_unit_net REAL NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        ${syncColumns},
+        FOREIGN KEY (category_id) REFERENCES complete_quote_categories(id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS complete_quotes (
+        id TEXT PRIMARY KEY,
+        number TEXT NOT NULL UNIQUE,
+        customer_id TEXT NOT NULL,
+        project_address TEXT NOT NULL,
+        work_description TEXT NOT NULL,
+        created_on TEXT NOT NULL,
+        validity_days INTEGER NOT NULL DEFAULT 15,
+        vat TEXT NOT NULL DEFAULT '27',
+        status TEXT NOT NULL DEFAULT 'Vázlat',
+        note TEXT,
+        version INTEGER NOT NULL DEFAULT 1,
+        status_history_json TEXT NOT NULL DEFAULT '[]',
+        ${syncColumns},
+        FOREIGN KEY (customer_id) REFERENCES customers(id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS complete_quote_sections (
+        id TEXT PRIMARY KEY,
+        quote_id TEXT NOT NULL,
+        category_id TEXT,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'regular',
+        position INTEGER NOT NULL DEFAULT 0,
+        ${syncColumns},
+        FOREIGN KEY (quote_id) REFERENCES complete_quotes(id) ON DELETE CASCADE
+      )`,
+      `CREATE TABLE IF NOT EXISTS complete_quote_items (
+        id TEXT PRIMARY KEY,
+        section_id TEXT NOT NULL,
+        template_id TEXT,
+        description TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        unit TEXT NOT NULL,
+        material_unit_net REAL NOT NULL DEFAULT 0,
+        labor_unit_net REAL NOT NULL DEFAULT 0,
+        position INTEGER NOT NULL DEFAULT 0,
+        ${syncColumns},
+        FOREIGN KEY (section_id) REFERENCES complete_quote_sections(id) ON DELETE CASCADE
       )`
     ]
   }

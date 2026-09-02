@@ -8,6 +8,9 @@ release/
 out/
 .tmp-tests/
 
+# Local reference offers - may contain real customer and pricing data
+mintaajanalat/
+
 # Logs
 *.log
 npm-debug.log*

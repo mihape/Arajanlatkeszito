@@ -13,12 +13,22 @@ function registerPdfHandlers() {
       defaultDirectory: app.getPath("documents")
     });
   });
+
+  ipcMain.handle(PDF_CHANNELS.EXPORT_COMPLETE_QUOTE, async (event, options = {}) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) return { ok: false, reason: "window-not-found" };
+    return exportWindowToPdf(window, dialog, {
+      ...options,
+      kind: "complete",
+      defaultDirectory: app.getPath("documents")
+    });
+  });
 }
 
 async function exportWindowToPdf(window, dialog, options = {}) {
   const defaultPath = buildPdfDefaultPath(options);
   const { canceled, filePath } = await dialog.showSaveDialog(window, {
-    title: options.mode === "internal" ? "Belső PDF mentése" : "Ügyfél PDF mentése",
+    title: options.kind === "complete" ? "Komplett ajánlat PDF mentése" : options.mode === "internal" ? "Belső PDF mentése" : "Ügyfél PDF mentése",
     defaultPath,
     filters: [{ name: "PDF", extensions: ["pdf"] }]
   });
@@ -29,16 +39,29 @@ async function exportWindowToPdf(window, dialog, options = {}) {
     printBackground: true,
     pageSize: "A4",
     landscape: false,
-    preferCSSPageSize: true
+    preferCSSPageSize: true,
+    displayHeaderFooter: options.kind === "complete",
+    headerTemplate: "<span></span>",
+    footerTemplate: options.kind === "complete" ? completeQuoteFooter(options.quoteNumber) : "<span></span>"
   });
   fs.writeFileSync(filePath, pdfBuffer);
   return { ok: true, path: filePath, bytes: pdfBuffer.length };
 }
 
 function buildPdfDefaultPath(options = {}) {
+  if (options.kind === "complete") {
+    const quoteNumber = sanitizePdfFileName(options.quoteNumber || "komplett-ajanlat");
+    const style = options.style === "classic" ? "classic" : "modern";
+    return path.join(options.defaultDirectory || process.cwd(), `${quoteNumber}-komplett-${style}.pdf`);
+  }
   const suffix = options.mode === "internal" ? "belso" : "ugyfel";
   const quoteNumber = sanitizePdfFileName(options.quoteNumber || "ajanlat");
   return path.join(options.defaultDirectory || process.cwd(), `${quoteNumber}-${suffix}.pdf`);
+}
+
+function completeQuoteFooter(quoteNumber) {
+  const safeNumber = sanitizePdfFileName(quoteNumber || "komplett-ajanlat");
+  return `<div style="width:100%; padding:0 12mm; font-size:8px; color:#555; display:flex; justify-content:space-between;"><span>${safeNumber}</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>`;
 }
 
 function sanitizePdfFileName(value) {
@@ -55,5 +78,6 @@ module.exports = {
   registerPdfHandlers,
   exportWindowToPdf,
   buildPdfDefaultPath,
-  sanitizePdfFileName
+  sanitizePdfFileName,
+  completeQuoteFooter
 };

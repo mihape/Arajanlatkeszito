@@ -2,6 +2,7 @@ const DB_KEY = "nyilaszaro-ajanlatkeszito-v1";
 const APP_MODE = getAppMode();
 const pricing = window.NyilaszaroPricing;
 const matrixImport = window.NyilaszaroMatrixImport;
+const completeQuote = window.NyilaszaroCompleteQuote;
 
 if (!pricing) {
   throw new Error("Pricing module is not loaded.");
@@ -9,6 +10,10 @@ if (!pricing) {
 
 if (!matrixImport) {
   throw new Error("Matrix import module is not loaded.");
+}
+
+if (!completeQuote) {
+  throw new Error("Complete quote module is not loaded.");
 }
 
 const productTypes = [
@@ -54,6 +59,7 @@ const openingTypes = [
 
 const navItems = [
   { id: "quotes", label: "Ajánlatok", icon: "file" },
+  { id: "complete-quotes", label: "Komplett ajánlat készítés", icon: "grid" },
   { id: "customers", label: "Ügyfelek", icon: "users" },
   { id: "profiles", label: "Műanyag nyílászárók", icon: "factory" },
   { id: "interior", label: "Beltéri ajtók", icon: "door" },
@@ -68,6 +74,18 @@ let desktopSaveTimer = null;
 let ui = {
   view: "quotes",
   selectedQuoteId: state.quotes[0]?.id || "",
+  selectedCompleteQuoteId: state.completeQuotes?.[0]?.id || "",
+  selectedCompleteSectionId: "",
+  selectedCompleteItemId: "",
+  completeItemEditorOpen: false,
+  completeQuickFocus: null,
+  completeItemDraft: completeQuote.createItem(),
+  completeTemplateDraft: null,
+  completeCategoryDraft: null,
+  completeStatusFilter: "all",
+  completeCustomerFilter: "all",
+  completeSearch: "",
+  completeExportStyle: "modern",
   selectedItemId: "",
   selectedCustomerId: state.customers[0]?.id || "",
   selectedProfileId: state.catalog.profiles[0]?.id || "",
@@ -99,9 +117,11 @@ hydrateStateFromDesktopStorage();
 document.addEventListener("click", handleClick);
 document.addEventListener("input", handleInput);
 document.addEventListener("change", handleChange);
+document.addEventListener("keydown", handleCompleteQuickEntryKeydown);
 window.addEventListener("afterprint", clearPrintMode);
 window.nyilaszaroSmoke = {
-  preparePrint: prepareSmokePrint
+  preparePrint: prepareSmokePrint,
+  prepareCompletePrint: prepareCompleteSmokePrint
 };
 
 function uid(prefix) {
@@ -184,7 +204,8 @@ function normalizeState(raw, seed) {
       extensions: raw.catalog?.extensions?.length ? raw.catalog.extensions : seed.catalog.extensions,
       accessories: raw.catalog?.accessories?.length ? raw.catalog.accessories : seed.catalog.accessories,
       interiorDoors: normalizeInteriorDoors(raw.catalog?.interiorDoors, seed.catalog.interiorDoors),
-      exteriorOpenings: normalizeExteriorOpenings(raw.catalog?.exteriorOpenings, seed.catalog.exteriorOpenings)
+      exteriorOpenings: normalizeExteriorOpenings(raw.catalog?.exteriorOpenings, seed.catalog.exteriorOpenings),
+      completeQuote: completeQuote.normalizeCatalog(raw.catalog?.completeQuote || seed.catalog.completeQuote)
     },
     openingImages: raw.openingImages || {}
   };
@@ -204,6 +225,7 @@ function normalizeState(raw, seed) {
   if (!merged.customers?.length) merged.customers = seed.customers;
   merged.quotes = (merged.quotes || seed.quotes).map((quote) => normalizeQuoteWorkflow(quote, seed));
   if (!merged.quotes?.length) merged.quotes = seed.quotes;
+  merged.completeQuotes = (raw.completeQuotes || seed.completeQuotes || []).map((quote) => completeQuote.normalizeQuote(quote));
   return merged;
 }
 
@@ -286,6 +308,10 @@ async function hydrateStateFromDesktopStorage() {
 
 function resetUiAfterStateHydration() {
   ui.selectedQuoteId = state.quotes[0]?.id || "";
+  ui.selectedCompleteQuoteId = state.completeQuotes?.[0]?.id || "";
+  ui.selectedCompleteSectionId = "";
+  ui.selectedCompleteItemId = "";
+  ui.completeItemDraft = completeQuote.createItem();
   ui.selectedItemId = "";
   ui.selectedCustomerId = state.customers[0]?.id || "";
   ui.selectedProfileId = state.catalog.profiles[0]?.id || "";
@@ -326,7 +352,10 @@ function syncStateFromMutation(result, options = {}) {
     view: ui.view,
     selectedQuoteId: ui.selectedQuoteId,
     selectedItemId: ui.selectedItemId,
-    selectedCustomerId: ui.selectedCustomerId
+    selectedCustomerId: ui.selectedCustomerId,
+    selectedCompleteQuoteId: ui.selectedCompleteQuoteId,
+    selectedCompleteSectionId: ui.selectedCompleteSectionId,
+    selectedCompleteItemId: ui.selectedCompleteItemId
   };
   state = normalizeState(result.state, createSeedState());
   resetUiAfterStateHydration();
@@ -334,6 +363,9 @@ function syncStateFromMutation(result, options = {}) {
   ui.selectedQuoteId = options.selectedQuoteId ?? (state.quotes.some((quote) => quote.id === previous.selectedQuoteId) ? previous.selectedQuoteId : state.quotes[0]?.id || "");
   ui.selectedItemId = options.selectedItemId ?? previous.selectedItemId;
   ui.selectedCustomerId = options.selectedCustomerId ?? (state.customers.some((customer) => customer.id === previous.selectedCustomerId) ? previous.selectedCustomerId : state.customers[0]?.id || "");
+  ui.selectedCompleteQuoteId = options.selectedCompleteQuoteId ?? (state.completeQuotes.some((quote) => quote.id === previous.selectedCompleteQuoteId) ? previous.selectedCompleteQuoteId : state.completeQuotes[0]?.id || "");
+  ui.selectedCompleteSectionId = options.selectedCompleteSectionId ?? previous.selectedCompleteSectionId;
+  ui.selectedCompleteItemId = options.selectedCompleteItemId ?? previous.selectedCompleteItemId;
   return true;
 }
 
@@ -377,6 +409,33 @@ async function persistQuoteDelete(id) {
     return { ok: true };
   }
   const result = await dataApi.deleteQuote(id);
+  if (result.ok) syncStateFromMutation(result);
+  return result;
+}
+
+async function persistCompleteQuote(quote) {
+  const dataApi = window.nyilaszaroApp?.data;
+  if (!dataApi?.upsertCompleteQuote) {
+    saveState();
+    return { ok: true };
+  }
+  const result = await dataApi.upsertCompleteQuote(clone(quote));
+  syncStateFromMutation(result, {
+    selectedCompleteQuoteId: quote.id,
+    selectedCompleteSectionId: ui.selectedCompleteSectionId,
+    selectedCompleteItemId: ui.selectedCompleteItemId,
+    view: ui.view
+  });
+  return result;
+}
+
+async function persistCompleteQuoteDelete(id) {
+  const dataApi = window.nyilaszaroApp?.data;
+  if (!dataApi?.deleteCompleteQuote) {
+    saveState();
+    return { ok: true };
+  }
+  const result = await dataApi.deleteCompleteQuote(id);
   if (result.ok) syncStateFromMutation(result);
   return result;
 }
@@ -468,7 +527,8 @@ function createSeedState() {
         { id: "install-mosquito", category: "install", name: "Szúnyogháló beépítés", pricing: "fixed", price: 8500 }
       ],
       interiorDoors: createInteriorDoorSeed(),
-      exteriorOpenings: openingTypes
+      exteriorOpenings: openingTypes,
+      completeQuote: completeQuote.createStarterCatalog()
     },
     openingImages: {},
     quotes: demoMode ? [
@@ -561,7 +621,8 @@ function createSeedState() {
           }
         ]
       }
-    ] : []
+    ] : [],
+    completeQuotes: []
   };
 }
 
@@ -784,6 +845,10 @@ function getSelectedQuote() {
   return state.quotes.find((quote) => quote.id === ui.selectedQuoteId) || state.quotes[0];
 }
 
+function getSelectedCompleteQuote() {
+  return state.completeQuotes.find((quote) => quote.id === ui.selectedCompleteQuoteId) || state.completeQuotes[0];
+}
+
 function getCustomer(id) {
   return state.customers.find((customer) => customer.id === id);
 }
@@ -809,8 +874,24 @@ function render() {
       </main>
     </div>
     ${renderPrintSheet(quote)}
+    ${renderCompletePrintSheet(getSelectedCompleteQuote())}
     ${ui.toast ? `<div class="toast">${esc(ui.toast)}</div>` : ""}
   `;
+  focusCompleteQuickEntry();
+}
+
+function focusCompleteQuickEntry() {
+  const request = ui.completeQuickFocus;
+  if (!request || !app.querySelector) return;
+  ui.completeQuickFocus = null;
+  const focus = () => {
+    const selector = request.field === "template"
+      ? "[data-complete-template-id]"
+      : `[data-complete-inline-item="${request.field}"][data-id="${request.id}"]`;
+    app.querySelector(selector)?.focus?.();
+  };
+  const schedule = window.requestAnimationFrame || ((callback) => window.setTimeout(callback, 0));
+  schedule(focus);
 }
 
 function renderSidebar() {
@@ -825,7 +906,7 @@ function renderSidebar() {
       </div>
       <nav class="nav" aria-label="Fő navigáció">
         ${navItems.map((item) => `
-          <button class="nav-button ${ui.view === item.id || (item.id === "quotes" && ui.view === "quote-editor") ? "active" : ""}" data-view="${item.id}">
+          <button class="nav-button ${ui.view === item.id || (item.id === "quotes" && ui.view === "quote-editor") || (item.id === "complete-quotes" && ui.view === "complete-quote-editor") ? "active" : ""}" data-view="${item.id}">
             ${icon(item.icon, "nav-icon")}
             <span>${esc(item.label)}</span>
           </button>
@@ -869,6 +950,16 @@ function getViewMeta() {
     quotes: `
       <button class="button" data-action="new-quote">${icon("plus")}Új ajánlat</button>
     `,
+    "complete-quotes": `
+      <button class="button primary" data-action="new-complete-quote">${icon("plus")}Új komplett ajánlat</button>
+    `,
+    "complete-quote-editor": `
+      <button class="button" data-action="open-complete-dashboard">${icon("grid")}Komplett ajánlatok</button>
+      <button class="button" data-action="duplicate-complete-quote">${icon("copy")}Másolás</button>
+      <button class="button" data-action="set-complete-status" data-status="Elküldve">${icon("send")}Elküldve</button>
+      <button class="button" data-action="set-complete-status" data-status="Elfogadva">${icon("check")}Elfogadva</button>
+      <button class="button primary" data-action="export-complete-quote">${icon("print")}PDF export</button>
+    `,
     "quote-editor": `
       <button class="button" data-action="open-dashboard">${icon("grid")}Dashboard</button>
       <button class="button ${ui.customerPresentationMode ? "primary" : ""}" data-action="toggle-customer-view">${icon("eye")}${ui.customerPresentationMode ? "Szerkesztő nézet" : "Ügyfél nézet"}</button>
@@ -891,6 +982,14 @@ function getViewMeta() {
       title: "Ajánlatok dashboard",
       subtitle: "Árajánlatok állapota, dátumai, összegei és gyors műveletei egy helyen."
     },
+    "complete-quotes": {
+      title: "Komplett ajánlat készítés",
+      subtitle: "Építőipari munkanemek, külön anyag- és munkadíj, TERC-szerű PDF ajánlatok."
+    },
+    "complete-quote-editor": {
+      title: getSelectedCompleteQuote() ? `${getSelectedCompleteQuote().number} komplett ajánlat` : "Komplett ajánlat szerkesztő",
+      subtitle: "Ügyfél, munkanemek, tételsablonok, nettó anyag- és munkadíj egy helyen."
+    },
     "quote-editor": {
       title: quote ? `${quote.number} ajánlat` : "Ajánlat szerkesztő",
       subtitle: "Tételek, rajzos előnézet, beszerzési ár és ügyfélár egy helyen."
@@ -908,6 +1007,8 @@ function getViewMeta() {
 function renderContent(quote) {
   if (ui.view === "quotes") return renderQuotesDashboard();
   if (ui.view === "quote-editor") return renderQuotesView(quote);
+  if (ui.view === "complete-quotes") return renderCompleteQuotesDashboard();
+  if (ui.view === "complete-quote-editor") return renderCompleteQuoteEditor(getSelectedCompleteQuote());
   if (ui.view === "customers") return renderCustomersView();
   if (ui.view === "profiles") return renderProfilesView();
   if (ui.view === "interior") return renderInteriorDoorsView();
@@ -915,6 +1016,136 @@ function renderContent(quote) {
   if (ui.view === "extras") return renderExtrasView();
   if (ui.view === "settings") return renderSettingsView();
   return "";
+}
+
+function completeCatalog() {
+  return state.catalog.completeQuote;
+}
+
+function completeSections(quote = getSelectedCompleteQuote()) {
+  return quote?.sections || [];
+}
+
+function activeCompleteSection(quote = getSelectedCompleteQuote()) {
+  const sections = completeSections(quote);
+  return sections.find((section) => section.id === ui.selectedCompleteSectionId) || sections[0];
+}
+
+function completeStatusOptions() {
+  return quoteStatusOptions();
+}
+
+function renderCompleteQuotesDashboard() {
+  const term = String(ui.completeSearch || "").trim().toLowerCase();
+  const quotes = state.completeQuotes
+    .filter((quote) => ui.completeStatusFilter === "all" || quote.status === ui.completeStatusFilter)
+    .filter((quote) => ui.completeCustomerFilter === "all" || quote.customerId === ui.completeCustomerFilter)
+    .filter((quote) => !term || [quote.number, quote.projectAddress, quote.workDescription, getCustomer(quote.customerId)?.name].some((value) => String(value || "").toLowerCase().includes(term)))
+    .sort((left, right) => String(right.updatedAt || right.createdAt).localeCompare(String(left.updatedAt || left.createdAt)));
+  return `
+    <div class="workspace-main complete-quote-dashboard">
+      <section class="dashboard-hero">
+        <div class="dashboard-hero-copy">
+          <span class="dashboard-mode">Egyszerűsített TERC-szerű költségvetés</span>
+          <h2>${state.completeQuotes.length ? "Komplett ajánlatok" : "Készítsd el az első komplett ajánlatot"}</h2>
+          <p>Ügyfélhez rendelt munkanemek, külön nettó anyag- és munkadíj, Classic vagy Modern A4 PDF export.</p>
+        </div>
+        <div class="dashboard-hero-actions">
+          <button class="button" data-view="customers">${icon("users")}Ügyfelek</button>
+          <button class="button primary" data-action="new-complete-quote">${icon("plus")}Új komplett ajánlat</button>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-body form-grid three dashboard-filters">
+          <label>Keresés<input data-complete-search value="${esc(ui.completeSearch)}" placeholder="TZG szám, ügyfél, cím" /></label>
+          <label>Állapot<select data-complete-status>${completeStatusOptions().map((status) => `<option value="${esc(status.value)}" ${ui.completeStatusFilter === status.value ? "selected" : ""}>${esc(status.label)}</option>`).join("")}</select></label>
+          <label>Ügyfél<select data-complete-customer><option value="all">Összes ügyfél</option>${state.customers.map((customer) => `<option value="${esc(customer.id)}" ${ui.completeCustomerFilter === customer.id ? "selected" : ""}>${esc(customer.name)}</option>`).join("")}</select></label>
+        </div>
+        <div class="table-wrap">
+          <table class="dashboard-table complete-quote-table">
+            <thead><tr><th>Ajánlat</th><th>Ügyfél</th><th>Munka</th><th>Állapot</th><th>Munkanem</th><th class="numeric">Nettó</th><th class="numeric">Bruttó</th><th>Műveletek</th></tr></thead>
+            <tbody>${quotes.map((quote) => {
+              const totals = completeQuote.summarizeQuote(quote);
+              return `<tr><td><strong>${esc(quote.number)}</strong><div class="data-card-meta">${esc(quote.createdAt)}</div></td><td>${esc(getCustomer(quote.customerId)?.name || "Nincs ügyfél")}</td><td>${esc(quote.workDescription || "-")}<div class="data-card-meta">${esc(quote.projectAddress || "-")}</div></td><td><span class="status-pill ${statusClass(quote.status)}">${esc(quote.status)}</span></td><td>${quote.sections.length} db</td><td class="numeric">${money(totals.net)}</td><td class="numeric"><strong>${money(totals.gross)}</strong></td><td><div class="row-actions"><button class="button" data-action="select-complete-quote" data-id="${esc(quote.id)}">${icon("edit")}Megnyitás</button><button class="button danger icon-only" data-action="delete-complete-quote" data-id="${esc(quote.id)}" title="Törlés">${icon("trash")}</button></div></td></tr>`;
+            }).join("") || `<tr><td colspan="8"><div class="empty">Még nincs komplett ajánlat. Válassz ügyfelet, majd indíts új ajánlatot.</div></td></tr>`}</tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderCompleteQuoteEditor(quote) {
+  if (!quote) return `<div class="empty">Először hozz létre egy komplett ajánlatot.</div>`;
+  const customer = getCustomer(quote.customerId);
+  const totals = completeQuote.summarizeQuote(quote);
+  const validation = completeQuote.validateQuote(quote);
+  const section = activeCompleteSection(quote);
+  const catalog = completeCatalog();
+  const selectedCategoryIds = new Set(quote.sections.map((item) => item.categoryId));
+  const templates = catalog.itemTemplates.filter((template) => template.active && template.categoryId === section?.categoryId);
+  return `
+    <div class="complete-quote-editor">
+      <section class="panel flat">
+        <div class="panel-body">
+          <div class="form-grid four">
+            <label>Ügyfél<select data-bind-complete-quote="customerId">${state.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === quote.customerId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}</select></label>
+            <label>Ajánlatszám<input value="${esc(quote.number)}" readonly /></label>
+            <label>Kelt<input type="date" data-bind-complete-quote="createdAt" value="${esc(quote.createdAt)}" /></label>
+            <label>Érvényesség (nap)<input type="number" min="1" data-bind-complete-quote="validityDays" value="${esc(quote.validityDays)}" /></label>
+            <label>ÁFA<select data-bind-complete-quote="vat">${vatOptions().map((option) => `<option value="${esc(option.value)}" ${String(quote.vat) === String(option.value) ? "selected" : ""}>${esc(option.label)}</option>`).join("")}</select></label>
+            <label class="field full">Munkavégzés címe<input data-bind-complete-quote="projectAddress" value="${esc(quote.projectAddress || customer?.address || "")}" /></label>
+            <label class="field full">A munka leírása<textarea data-bind-complete-quote="workDescription">${esc(quote.workDescription)}</textarea></label>
+            <label class="field full">Ajánlati megjegyzés<textarea data-bind-complete-quote="note">${esc(quote.note)}</textarea></label>
+          </div>
+        </div>
+      </section>
+
+      <div class="complete-quote-layout">
+        <aside class="panel complete-section-panel">
+          <div class="panel-header"><div><h2 class="panel-title">Munkanemek</h2><p class="panel-note">Jelöld ki, mely fejezetek szerepeljenek az ajánlatban.</p></div></div>
+          <div class="panel-body complete-category-list">
+            ${catalog.categories.filter((category) => category.active || selectedCategoryIds.has(category.id)).map((category) => {
+              const checked = selectedCategoryIds.has(category.id);
+              const selected = section?.id && quote.sections.some((entry) => entry.id === section.id && entry.categoryId === category.id);
+              return `<div class="complete-category-row ${selected ? "selected" : ""}"><label class="complete-category-choice"><input type="checkbox" data-complete-category-toggle="${esc(category.id)}" ${checked ? "checked" : ""} /><span>${esc(category.name)}</span>${category.kind === "incidental" ? `<small>járulékos</small>` : ""}</label>${checked ? `<button type="button" class="button icon-only" data-action="select-complete-section" data-id="${esc(quote.sections.find((entry) => entry.categoryId === category.id)?.id || "")}" title="Megnyitás">${icon("edit")}</button>` : ""}</div>`;
+            }).join("")}
+          </div>
+          <div class="panel-body complete-category-create"><input data-complete-category-name value="${esc(ui.completeCategoryDraft || "")}" placeholder="Új munkanem neve" /><button class="button" data-action="add-complete-category">${icon("plus")}Hozzáadás</button></div>
+        </aside>
+
+        <main class="complete-section-workspace">
+          ${section ? renderCompleteSectionEditor(quote, section, templates) : `<section class="panel"><div class="panel-body empty">Jelölj ki legalább egy munkanemet a bal oldali listában.</div></section>`}
+        </main>
+
+        <aside class="price-stack">
+          <section class="panel"><div class="panel-header"><div><h2 class="panel-title">Ajánlati összesítő</h2><p class="panel-note">A tételsorok már kerekített összegei.</p></div></div><div class="panel-body summary-list">
+            ${summaryRow("Anyagköltség", money(totals.material))}
+            ${summaryRow("Munkadíj", money(totals.labor))}
+            ${totals.incidentalMaterial || totals.incidentalLabor ? summaryRow("Egyéb járulékos", money(totals.incidentalMaterial + totals.incidentalLabor)) : ""}
+            ${summaryRow("Nettó összesen", money(totals.net))}
+            ${summaryRow(`ÁFA ${vatLabel(quote)}`, money(totals.vatAmount))}
+            ${summaryRow("Fizetendő bruttó", money(totals.gross), "total")}
+          </div></section>
+          <section class="panel pdf-export-panel"><div class="panel-header"><div><h2 class="panel-title">Komplett ajánlat PDF</h2><p class="panel-note">A két stílus adattartalma azonos.</p></div></div><div class="panel-body"><label>Stílus<select data-complete-export-style><option value="classic" ${ui.completeExportStyle === "classic" ? "selected" : ""}>Classic - táblázatos</option><option value="modern" ${ui.completeExportStyle === "modern" ? "selected" : ""}>Modern - TZG</option></select></label>${validation.errors.length ? `<div class="warning-box">${icon("alert")}${validation.errors.map(esc).join("<br />")}</div>` : ""}${validation.warnings.length ? `<div class="warning-box">${icon("alert")}Exportálható figyelmeztetés:<br />${validation.warnings.map(esc).join("<br />")}</div>` : ""}<button class="button primary" data-action="export-complete-quote">${icon("print")}PDF mentése</button></div></section>
+        </aside>
+      </div>
+    </div>
+  `;
+}
+
+function renderCompleteSectionEditor(quote, section, templates) {
+  const item = section.items.find((entry) => entry.id === ui.selectedCompleteItemId) || ui.completeItemDraft;
+  const calculated = completeQuote.calculateItem(item);
+  return `
+    <section class="panel"><div class="panel-header"><div><h2 class="panel-title">${esc(section.name)}</h2><p class="panel-note">Válassz egy sablont: a tétel azonnal bekerül, utána csak a mennyiséget és a két egységárat kell megadnod.</p></div><div class="actions"><button class="button" data-action="move-complete-section" data-direction="up" data-id="${esc(section.id)}">↑</button><button class="button" data-action="move-complete-section" data-direction="down" data-id="${esc(section.id)}">↓</button></div></div>
+      <div class="panel-body"><div class="form-grid two"><label>Tétel hozzáadása sablonból<select data-complete-template-id><option value="">Válassz tételt…</option>${templates.map((template) => `<option value="${esc(template.id)}">${esc(template.description)}</option>`).join("")}</select></label><div class="actions align-end"><button class="button" data-action="new-complete-item">${icon("plus")}Új egyedi tétel</button></div></div>${templates.length ? `<details class="complete-template-details"><summary>Tételsablonok kezelése (${templates.length} db)</summary><div class="complete-template-library">${templates.map((template) => `<div><span><strong>${esc(template.description)}</strong><small>${esc(template.unit)} · ${money(template.materialUnitNet)} anyag · ${money(template.laborUnitNet)} munkadíj</small></span><button class="button danger icon-only" data-action="archive-complete-template" data-id="${esc(template.id)}" title="Archiválás">${icon("trash")}</button></div>`).join("")}</div></details>` : ""}</div>
+      ${ui.completeItemEditorOpen ? `<div class="panel-body complete-item-form"><div class="section-subtitle">${ui.selectedCompleteItemId ? "Tétel részletes szerkesztése" : "Új egyedi tétel"}</div><div class="form-grid four"><label class="field full">Tételszöveg<textarea data-complete-item-draft="description">${esc(item.description)}</textarea></label><label>Mennyiség<input type="number" min="0.001" step="0.001" data-complete-item-draft="quantity" value="${esc(item.quantity)}" /></label><label>Mértékegység<input list="complete-units" data-complete-item-draft="unit" value="${esc(item.unit)}" /><datalist id="complete-units">${completeQuote.UNITS.map((unit) => `<option value="${esc(unit)}"></option>`).join("")}</datalist></label><label>Anyag egységár (nettó)<input type="number" min="0" step="1" data-complete-item-draft="materialUnitNet" value="${esc(item.materialUnitNet)}" /></label><label>Munkadíj egységár (nettó)<input type="number" min="0" step="1" data-complete-item-draft="laborUnitNet" value="${esc(item.laborUnitNet)}" /></label></div><div class="calculation-strip"><span>Anyag összesen <strong>${money(calculated.material)}</strong></span><span>Munkadíj összesen <strong>${money(calculated.labor)}</strong></span><span>Nettó sorösszeg <strong>${money(calculated.material + calculated.labor)}</strong></span></div><div class="actions"><button class="button primary" data-action="save-complete-item">${icon("save")}Tétel mentése</button><button class="button" data-action="save-complete-template">${icon("layers")}Mentés új tételsablonként</button>${item.templateId ? `<button class="button" data-action="update-complete-template">${icon("edit")}Törzstétel frissítése</button>` : ""}${ui.selectedCompleteItemId ? `<button class="button danger" data-action="delete-complete-item">${icon("trash")}Tétel törlése</button>` : ""}</div></div>` : ""}
+    </section>
+    <section class="panel"><div class="panel-header"><div><h2 class="panel-title">Tételek</h2><p class="panel-note">${section.items.length} tétel · a mennyiség és az árak itt közvetlenül módosíthatók.</p></div></div><div class="table-wrap"><table class="complete-items-table complete-items-quick-table"><thead><tr><th>Ssz.</th><th>Tétel</th><th class="numeric">Menny.</th><th class="numeric">Anyag egységár</th><th class="numeric">Munkadíj egységár</th><th class="numeric">Nettó</th><th>Műveletek</th></tr></thead><tbody>${section.items.map((entry, index) => {
+      const totals = completeQuote.calculateItem(entry); return `<tr class="selectable ${entry.id === ui.selectedCompleteItemId ? "active" : ""}"><td>${index + 1}</td><td><strong>${esc(entry.description)}</strong><small>${esc(entry.unit)}</small></td><td class="numeric"><input aria-label="${esc(entry.description)} mennyiség" type="number" min="0.001" step="0.001" data-complete-inline-item="quantity" data-id="${esc(entry.id)}" value="${esc(entry.quantity)}" /></td><td class="numeric"><input aria-label="${esc(entry.description)} anyagár" type="number" min="0" step="1" data-complete-inline-item="materialUnitNet" data-id="${esc(entry.id)}" value="${esc(entry.materialUnitNet)}" /></td><td class="numeric"><input aria-label="${esc(entry.description)} munkadíj" type="number" min="0" step="1" data-complete-inline-item="laborUnitNet" data-id="${esc(entry.id)}" value="${esc(entry.laborUnitNet)}" /></td><td class="numeric"><strong>${money(totals.material + totals.labor)}</strong></td><td><div class="row-actions"><button class="button" data-action="select-complete-item" data-id="${esc(entry.id)}">${icon("edit")}Részletek</button><button class="button icon-only" data-action="move-complete-item" data-id="${esc(entry.id)}" data-direction="up" title="Fel">↑</button><button class="button icon-only" data-action="move-complete-item" data-id="${esc(entry.id)}" data-direction="down" title="Le">↓</button><button class="button icon-only" data-action="duplicate-complete-item" data-id="${esc(entry.id)}" title="Másolás">${icon("copy")}</button></div></td></tr>`;
+    }).join("") || `<tr><td colspan="7" class="empty">Még nincs tétel ebben a munkanemben.</td></tr>`}</tbody></table></div></section>
+  `;
 }
 
 function renderQuotesView(quote) {
@@ -2996,6 +3227,50 @@ function selectField(label, key, value, scope, options) {
   `;
 }
 
+function renderCompletePrintSheet(quote) {
+  if (!quote) return "";
+  const customer = getCustomer(quote.customerId);
+  const totals = completeQuote.summarizeQuote(quote);
+  const style = ui.completePrintStyle === "classic" ? "classic" : "modern";
+  return `
+    <article class="print-sheet complete-print-sheet complete-print-${style}">
+      <section class="complete-print-cover">
+        <header class="complete-print-header">
+          <div><strong>${esc(state.settings.companyName || "TZ Global Kft.")}</strong><span>${esc(state.settings.companyAddress || "")}</span><span>${esc(state.settings.companyPhone || "")}</span><span>${esc(state.settings.companyEmail || "")}</span></div>
+          <div class="complete-print-title"><span>Komplett árajánlat</span><h1>${esc(quote.number)}</h1><small>Kelt: ${esc(quote.createdAt || "-")}</small></div>
+        </header>
+        <div class="complete-print-party-grid"><div><strong>Megrendelő</strong><span>${esc(customer?.name || "Nincs ügyfél")}</span><span>${esc(customer?.address || "")}</span><span>${esc(customer?.email || "")}</span></div><div><strong>Munkavégzés helye</strong><span>${esc(quote.projectAddress || "-")}</span><strong>Érvényesség</strong><span>${number(quote.validityDays)} nap</span></div></div>
+        <section class="complete-print-description"><h2>A munka leírása</h2><p>${esc(quote.workDescription || "-")}</p>${quote.note ? `<p class="complete-print-note">${esc(quote.note)}</p>` : ""}</section>
+        <section class="complete-print-summary"><h2>Költségvetés főösszesítő</h2><table><tbody>
+          <tr><th>Építmény közvetlen költségei</th><td>${money(totals.material - totals.incidentalMaterial)}</td><td>${money(totals.labor - totals.incidentalLabor)}</td></tr>
+          ${totals.incidentalMaterial || totals.incidentalLabor ? `<tr><th>Egyéb járulékos munkák</th><td>${money(totals.incidentalMaterial)}</td><td>${money(totals.incidentalLabor)}</td></tr>` : ""}
+          <tr class="strong"><th>Nettó összesen</th><td colspan="2">${money(totals.net)}</td></tr>
+          <tr><th>ÁFA ${esc(vatLabel(quote))}</th><td colspan="2">${money(totals.vatAmount)}</td></tr>
+          <tr class="strong grand"><th>A munka ára</th><td colspan="2">${money(totals.gross)}</td></tr>
+        </tbody></table>
+        </section>
+        <div class="complete-print-signature">Aláírás</div>
+      </section>
+      <section class="complete-print-page complete-print-section-summary">
+        <h2>Munkanem összesítő</h2>
+        <table class="complete-print-summary-table"><thead><tr><th>Munkanem megnevezése</th><th>Anyag összege</th><th>Munkadíj összege</th></tr></thead><tbody>
+          ${totals.sections.map((section) => `<tr><td>${esc(section.name)}</td><td>${money(section.totals.material)}</td><td>${money(section.totals.labor)}</td></tr>`).join("")}
+          <tr class="strong"><td>Összesen</td><td>${money(totals.material)}</td><td>${money(totals.labor)}</td></tr>
+        </tbody></table>
+      </section>
+      ${totals.sections.map((section) => `
+        <section class="complete-print-page complete-print-detail-page">
+          <h2>${esc(section.name)}</h2>
+          <table class="complete-print-items"><thead><tr><th>Ssz.</th><th>Tétel szövege</th><th>Menny.</th><th>Egység</th><th>Anyag egységár</th><th>Munkadíj egységár</th><th>Anyag összesen</th><th>Munkadíj összesen</th></tr></thead><tbody>
+            ${section.items.map((item, index) => { const itemTotals = completeQuote.calculateItem(item); return `<tr><td>${index + 1}</td><td>${esc(item.description)}</td><td>${number(item.quantity)}</td><td>${esc(item.unit)}</td><td>${money(item.materialUnitNet)}</td><td>${money(item.laborUnitNet)}</td><td>${money(itemTotals.material)}</td><td>${money(itemTotals.labor)}</td></tr>`; }).join("") || `<tr><td colspan="8">Nincs tétel ebben a munkanemben.</td></tr>`}
+            <tr class="strong"><td colspan="6">Munkanem összesen</td><td>${money(section.totals.material)}</td><td>${money(section.totals.labor)}</td></tr>
+          </tbody></table>
+        </section>
+      `).join("")}
+    </article>
+  `;
+}
+
 function renderPrintSheet(quote) {
   if (!quote) return "";
   const customer = getCustomer(quote.customerId);
@@ -3094,6 +3369,27 @@ function handleClick(event) {
 
   if (action === "select-quote") selectQuote(id);
   if (action === "new-quote") newQuote();
+  if (action === "new-complete-quote") newCompleteQuote();
+  if (action === "open-complete-dashboard") openCompleteDashboard();
+  if (action === "select-complete-quote") selectCompleteQuote(id);
+  if (action === "delete-complete-quote") deleteCompleteQuote(id);
+  if (action === "duplicate-complete-quote") duplicateCompleteQuote();
+  if (action === "set-complete-status") setCompleteQuoteStatus(id || ui.selectedCompleteQuoteId, actionButton.dataset.status);
+  if (action === "select-complete-section") selectCompleteSection(id);
+  if (action === "add-complete-category") addCompleteCategory();
+  if (action === "archive-complete-category") archiveCompleteCategory(id);
+  if (action === "move-complete-section") moveCompleteSection(id, actionButton.dataset.direction);
+  if (action === "load-complete-template") loadCompleteTemplate();
+  if (action === "new-complete-item") newCompleteItem();
+  if (action === "save-complete-item") saveCompleteItem();
+  if (action === "select-complete-item") selectCompleteItem(id);
+  if (action === "move-complete-item") moveCompleteItem(id, actionButton.dataset.direction);
+  if (action === "duplicate-complete-item") duplicateCompleteItem(id);
+  if (action === "delete-complete-item") deleteCompleteItem();
+  if (action === "save-complete-template") saveCompleteTemplate();
+  if (action === "update-complete-template") updateCompleteTemplate();
+  if (action === "archive-complete-template") archiveCompleteTemplate(id);
+  if (action === "export-complete-quote") exportCompleteQuote();
   if (action === "duplicate-quote") duplicateQuote();
   if (action === "print-quote") printQuote(ui.selectedQuoteId, actionButton.dataset.printMode || "customer");
   if (action === "dashboard-print-quote") printQuote(id, actionButton.dataset.printMode || "customer");
@@ -3146,6 +3442,23 @@ function handleClick(event) {
 
 function handleInput(event) {
   const target = event.target;
+  if (target.dataset.bindCompleteQuote) {
+    stageCompleteQuoteField(target.dataset.bindCompleteQuote, target.value);
+    return;
+  }
+  if (target.dataset.completeItemDraft) {
+    updateCompleteItemDraft(target.dataset.completeItemDraft, target.value);
+    return;
+  }
+  if (target.dataset.completeCategoryName !== undefined) {
+    ui.completeCategoryDraft = target.value;
+    return;
+  }
+  if (target.dataset.completeSearch !== undefined) {
+    ui.completeSearch = target.value;
+    render();
+    return;
+  }
   if (target.dataset.bindItem) {
     updateItemDraft(target.dataset.bindItem, target.value);
     saveState();
@@ -3248,6 +3561,44 @@ function handleInput(event) {
 
 function handleChange(event) {
   const target = event.target;
+  if (target.dataset.completeCategoryToggle) {
+    toggleCompleteCategory(target.dataset.completeCategoryToggle, target.checked);
+    return;
+  }
+  if (target.dataset.completeTemplateId !== undefined) {
+    addCompleteTemplateItem(target.value);
+    return;
+  }
+  if (target.dataset.completeInlineItem) {
+    const active = document.activeElement;
+    if (active?.dataset?.completeInlineItem && active !== target) {
+      ui.completeQuickFocus = { id: active.dataset.id, field: active.dataset.completeInlineItem };
+    }
+    updateCompleteInlineItem(target.dataset.id, target.dataset.completeInlineItem, target.value);
+    return;
+  }
+  if (target.dataset.completeExportStyle !== undefined) {
+    ui.completeExportStyle = target.value === "classic" ? "classic" : "modern";
+    return;
+  }
+  if (target.dataset.completeStatus !== undefined) {
+    ui.completeStatusFilter = target.value;
+    render();
+    return;
+  }
+  if (target.dataset.completeCustomer !== undefined) {
+    ui.completeCustomerFilter = target.value;
+    render();
+    return;
+  }
+  if (target.dataset.bindCompleteQuote) {
+    updateCompleteQuoteField(target.dataset.bindCompleteQuote, target.value);
+    return;
+  }
+  if (target.dataset.completeItemDraft) {
+    updateCompleteItemDraft(target.dataset.completeItemDraft, target.value);
+    return;
+  }
   if (target.dataset.dashboardStatus !== undefined) {
     ui.quoteStatusFilter = target.value;
     render();
@@ -3288,6 +3639,18 @@ function handleChange(event) {
   if (target.dataset.action === "import-backup" && target.files?.[0]) {
     importBackup(target.files[0]);
   }
+}
+
+function handleCompleteQuickEntryKeydown(event) {
+  const target = event.target;
+  if (event.key !== "Enter" || !target?.dataset?.completeInlineItem) return;
+  const fields = Array.from(target.closest("tr")?.querySelectorAll("[data-complete-inline-item]") || []);
+  const next = fields[fields.indexOf(target) + 1];
+  event.preventDefault();
+  ui.completeQuickFocus = next
+    ? { id: next.dataset.id, field: next.dataset.completeInlineItem }
+    : { field: "template" };
+  target.blur();
 }
 
 function coerceField(key, value) {
@@ -3385,6 +3748,394 @@ async function newQuote() {
   showToast("Új ajánlat létrehozva.");
 }
 
+function completeUid(prefix) {
+  return uid(`complete-${prefix}`);
+}
+
+async function newCompleteQuote() {
+  if (!state.customers.length) {
+    ui.view = "customers";
+    render();
+    showToast("Előbb vigyél fel legalább egy ügyfelet.");
+    return;
+  }
+  const today = todayIso();
+  const customer = state.customers[0];
+  const quote = completeQuote.normalizeQuote({
+    id: completeUid("quote"),
+    number: completeQuote.nextNumber(state.completeQuotes),
+    customerId: customer.id,
+    projectAddress: customer.address || "",
+    workDescription: "",
+    createdAt: today,
+    updatedAt: today,
+    validityDays: state.settings.validityDays || 15,
+    vat: state.settings.vat ?? 27,
+    status: "Vázlat",
+    version: 1,
+    statusHistory: [{ status: "Vázlat", at: today, note: "Létrehozva" }],
+    note: "",
+    sections: []
+  });
+  state.completeQuotes.unshift(quote);
+  ui.selectedCompleteQuoteId = quote.id;
+  ui.selectedCompleteSectionId = "";
+  ui.selectedCompleteItemId = "";
+  ui.completeItemDraft = completeQuote.createItem();
+  ui.view = "complete-quote-editor";
+  await persistCompleteQuote(quote);
+  render();
+  showToast("Új komplett ajánlat létrehozva.");
+}
+
+function openCompleteDashboard() {
+  ui.view = "complete-quotes";
+  ui.selectedCompleteItemId = "";
+  render();
+}
+
+function selectCompleteQuote(id) {
+  const quote = state.completeQuotes.find((item) => item.id === id);
+  if (!quote) return;
+  ui.selectedCompleteQuoteId = quote.id;
+  ui.selectedCompleteSectionId = quote.sections[0]?.id || "";
+  ui.selectedCompleteItemId = "";
+  ui.completeItemDraft = completeQuote.createItem();
+  ui.view = "complete-quote-editor";
+  render();
+}
+
+async function deleteCompleteQuote(id) {
+  const index = state.completeQuotes.findIndex((quote) => quote.id === id);
+  if (index < 0) return;
+  state.completeQuotes.splice(index, 1);
+  ui.selectedCompleteQuoteId = state.completeQuotes[0]?.id || "";
+  ui.view = "complete-quotes";
+  await persistCompleteQuoteDelete(id);
+  render();
+  showToast("Komplett ajánlat törölve.");
+}
+
+async function duplicateCompleteQuote() {
+  const quote = getSelectedCompleteQuote();
+  if (!quote) return;
+  const today = todayIso();
+  const copy = clone(quote);
+  copy.id = completeUid("quote");
+  copy.number = completeQuote.nextNumber(state.completeQuotes);
+  copy.createdAt = today;
+  copy.updatedAt = today;
+  copy.status = "Vázlat";
+  copy.version = 1;
+  copy.statusHistory = [{ status: "Vázlat", at: today, note: "Másolatként létrehozva" }];
+  copy.sections = copy.sections.map((section) => ({
+    ...section,
+    id: completeUid("section"),
+    items: section.items.map((item) => ({ ...item, id: completeUid("item") }))
+  }));
+  state.completeQuotes.unshift(copy);
+  ui.selectedCompleteQuoteId = copy.id;
+  ui.selectedCompleteSectionId = copy.sections[0]?.id || "";
+  ui.selectedCompleteItemId = "";
+  ui.view = "complete-quote-editor";
+  await persistCompleteQuote(copy);
+  render();
+  showToast("Komplett ajánlat másolva.");
+}
+
+function touchCompleteQuote(quote) {
+  quote.updatedAt = todayIso();
+  quote.version = Number(quote.version || 1) + 1;
+}
+
+async function setCompleteQuoteStatus(id, status) {
+  const quote = state.completeQuotes.find((item) => item.id === id);
+  if (!quote || !status || quote.status === status) return;
+  quote.status = status;
+  quote.statusHistory = quote.statusHistory || [];
+  quote.statusHistory.push({ status, at: todayIso(), note: "Státuszváltás" });
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+  showToast(`Komplett ajánlat státusza: ${status}.`);
+}
+
+async function updateCompleteQuoteField(key, value) {
+  stageCompleteQuoteField(key, value);
+  const quote = getSelectedCompleteQuote();
+  if (!quote) return;
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+}
+
+function stageCompleteQuoteField(key, value) {
+  const quote = getSelectedCompleteQuote();
+  if (!quote) return;
+  if (key === "validityDays") quote[key] = Math.max(1, Math.round(Number(value || 1)));
+  else if (key === "vat") quote[key] = value === "FAD" ? "FAD" : Number(value || 0);
+  else quote[key] = value;
+  if (key === "customerId" && !quote.projectAddress) quote.projectAddress = getCustomer(value)?.address || "";
+}
+
+async function toggleCompleteCategory(categoryId, checked) {
+  const quote = getSelectedCompleteQuote();
+  const category = completeCatalog().categories.find((item) => item.id === categoryId);
+  if (!quote || !category) return;
+  const existingIndex = quote.sections.findIndex((section) => section.categoryId === categoryId);
+  if (checked && existingIndex < 0) {
+    quote.sections.push({ id: completeUid("section"), categoryId: category.id, name: category.name, kind: category.kind, position: quote.sections.length, items: [] });
+  }
+  if (!checked && existingIndex >= 0) {
+    if (quote.sections[existingIndex].items.length) {
+      render();
+      showToast("Előbb töröld vagy helyezd át a munkanem tételeit.");
+      return;
+    }
+    quote.sections.splice(existingIndex, 1);
+  }
+  quote.sections.forEach((section, position) => { section.position = position; });
+  ui.selectedCompleteSectionId = quote.sections.find((section) => section.categoryId === categoryId)?.id || quote.sections[0]?.id || "";
+  ui.selectedCompleteItemId = "";
+  ui.completeItemDraft = completeQuote.createItem();
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+}
+
+async function addCompleteCategory() {
+  const name = String(ui.completeCategoryDraft || "").trim();
+  if (!name) {
+    showToast("Add meg az új munkanem nevét.");
+    return;
+  }
+  const catalog = completeCatalog();
+  if (catalog.categories.some((category) => category.name.toLowerCase() === name.toLowerCase())) {
+    showToast("Ilyen munkanem már létezik.");
+    return;
+  }
+  const category = { id: completeUid("category"), name, kind: "regular", position: catalog.categories.length, active: true };
+  catalog.categories.push(category);
+  ui.completeCategoryDraft = "";
+  const result = await window.nyilaszaroApp?.data?.upsertCompleteCategory?.(clone(category));
+  if (result?.state) syncStateFromMutation(result, { view: "complete-quote-editor", selectedCompleteQuoteId: ui.selectedCompleteQuoteId });
+  else saveState();
+  render();
+  showToast("Új munkanem mentve a törzsbe.");
+}
+
+async function archiveCompleteCategory(id) {
+  const category = completeCatalog().categories.find((item) => item.id === id);
+  if (!category) return;
+  category.active = false;
+  const result = await window.nyilaszaroApp?.data?.archiveCompleteCategory?.(id);
+  if (result?.state) syncStateFromMutation(result, { view: "complete-quote-editor", selectedCompleteQuoteId: ui.selectedCompleteQuoteId, selectedCompleteSectionId: ui.selectedCompleteSectionId });
+  else saveState();
+  render();
+  showToast("Munkanem archiválva; a régi ajánlatokban változatlanul megmarad.");
+}
+
+function selectCompleteSection(id) {
+  const quote = getSelectedCompleteQuote();
+  const section = quote?.sections.find((item) => item.id === id);
+  if (!section) return;
+  ui.selectedCompleteSectionId = section.id;
+  ui.selectedCompleteItemId = "";
+  ui.completeItemEditorOpen = false;
+  ui.completeItemDraft = completeQuote.createItem();
+  render();
+}
+
+async function moveCompleteSection(id, direction) {
+  const quote = getSelectedCompleteQuote();
+  const index = quote?.sections.findIndex((section) => section.id === id) ?? -1;
+  const target = direction === "up" ? index - 1 : index + 1;
+  if (!quote || index < 0 || target < 0 || target >= quote.sections.length) return;
+  [quote.sections[index], quote.sections[target]] = [quote.sections[target], quote.sections[index]];
+  quote.sections.forEach((section, position) => { section.position = position; });
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+}
+
+function loadCompleteTemplate() {
+  const template = completeCatalog().itemTemplates.find((item) => item.id === ui.completeTemplateId);
+  if (!template) {
+    showToast("Válassz tételsablont.");
+    return;
+  }
+  ui.selectedCompleteItemId = "";
+  ui.completeItemDraft = completeQuote.createItem({ ...template, templateId: template.id, id: "" });
+  render();
+}
+
+async function addCompleteTemplateItem(templateId) {
+  const quote = getSelectedCompleteQuote();
+  const section = activeCompleteSection(quote);
+  const template = completeCatalog().itemTemplates.find((item) => item.id === templateId && item.active);
+  if (!quote || !section || !template) return;
+  const item = completeQuote.createItem({ ...template, id: completeUid("item"), templateId: template.id, position: section.items.length });
+  section.items.push(item);
+  ui.completeTemplateId = "";
+  ui.selectedCompleteItemId = "";
+  ui.completeItemEditorOpen = false;
+  ui.completeQuickFocus = { id: item.id, field: "quantity" };
+  ui.completeItemDraft = completeQuote.createItem();
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+  showToast("Tétel hozzáadva. Add meg a mennyiséget és az egységárakat a táblázatban.");
+}
+
+function newCompleteItem() {
+  ui.selectedCompleteItemId = "";
+  ui.completeItemDraft = completeQuote.createItem();
+  ui.completeItemEditorOpen = true;
+  render();
+}
+
+function updateCompleteItemDraft(key, value) {
+  const numeric = ["quantity", "materialUnitNet", "laborUnitNet"].includes(key);
+  ui.completeItemDraft[key] = numeric ? Number(value || 0) : value;
+}
+
+async function saveCompleteItem() {
+  const quote = getSelectedCompleteQuote();
+  const section = activeCompleteSection(quote);
+  if (!quote || !section) return;
+  const item = completeQuote.normalizeItem(ui.completeItemDraft, section.items.length);
+  const validation = completeQuote.validateQuote({ ...quote, sections: [{ ...section, items: [item] }] });
+  if (validation.errors.length) {
+    showToast(validation.errors[0]);
+    return;
+  }
+  if (ui.selectedCompleteItemId) {
+    const index = section.items.findIndex((entry) => entry.id === ui.selectedCompleteItemId);
+    if (index >= 0) section.items[index] = { ...item, id: ui.selectedCompleteItemId, position: index };
+  } else {
+    item.id = completeUid("item");
+    item.position = section.items.length;
+    section.items.push(item);
+    ui.selectedCompleteItemId = item.id;
+  }
+  ui.completeItemDraft = clone(section.items.find((entry) => entry.id === ui.selectedCompleteItemId));
+  ui.completeItemEditorOpen = false;
+  ui.selectedCompleteItemId = "";
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+  showToast("Komplett ajánlat tétel mentve.");
+}
+
+function selectCompleteItem(id) {
+  const section = activeCompleteSection();
+  const item = section?.items.find((entry) => entry.id === id);
+  if (!item) return;
+  ui.selectedCompleteItemId = id;
+  ui.completeItemDraft = clone(item);
+  ui.completeItemEditorOpen = true;
+  render();
+}
+
+async function updateCompleteInlineItem(id, key, value) {
+  const quote = getSelectedCompleteQuote();
+  const section = activeCompleteSection(quote);
+  const item = section?.items.find((entry) => entry.id === id);
+  if (!quote || !section || !item) return;
+  if (key === "quantity") item.quantity = Math.round(Math.max(0, Number(value || 0)) * 1000) / 1000;
+  else item[key] = Math.max(0, Math.round(Number(value || 0)));
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+}
+
+async function deleteCompleteItem() {
+  const quote = getSelectedCompleteQuote();
+  const section = activeCompleteSection(quote);
+  if (!quote || !section || !ui.selectedCompleteItemId) return;
+  section.items = section.items.filter((item) => item.id !== ui.selectedCompleteItemId);
+  section.items.forEach((item, position) => { item.position = position; });
+  ui.selectedCompleteItemId = "";
+  ui.completeItemDraft = completeQuote.createItem();
+  ui.completeItemEditorOpen = false;
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+  showToast("Komplett ajánlat tétel törölve.");
+}
+
+async function moveCompleteItem(id, direction) {
+  const quote = getSelectedCompleteQuote();
+  const section = activeCompleteSection(quote);
+  const index = section?.items.findIndex((item) => item.id === id) ?? -1;
+  const target = direction === "up" ? index - 1 : index + 1;
+  if (!quote || !section || index < 0 || target < 0 || target >= section.items.length) return;
+  [section.items[index], section.items[target]] = [section.items[target], section.items[index]];
+  section.items.forEach((item, position) => { item.position = position; });
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+}
+
+async function duplicateCompleteItem(id) {
+  const quote = getSelectedCompleteQuote();
+  const section = activeCompleteSection(quote);
+  const source = section?.items.find((item) => item.id === id);
+  if (!quote || !section || !source) return;
+  const copy = { ...clone(source), id: completeUid("item"), position: section.items.length };
+  section.items.push(copy);
+  ui.selectedCompleteItemId = copy.id;
+  ui.completeItemDraft = clone(copy);
+  touchCompleteQuote(quote);
+  await persistCompleteQuote(quote);
+  render();
+  showToast("Tétel másolva.");
+}
+
+async function saveCompleteTemplate() {
+  const section = activeCompleteSection();
+  const item = completeQuote.normalizeItem(ui.completeItemDraft);
+  if (!section || !item.description || !item.unit) {
+    showToast("A sablonhoz töltsd ki a tételszöveget és a mértékegységet.");
+    return;
+  }
+  const template = { ...item, id: completeUid("template"), categoryId: section.categoryId, active: true };
+  completeCatalog().itemTemplates.push(template);
+  const result = await window.nyilaszaroApp?.data?.upsertCompleteTemplate?.(clone(template));
+  if (result?.state) syncStateFromMutation(result, { view: "complete-quote-editor", selectedCompleteQuoteId: ui.selectedCompleteQuoteId, selectedCompleteSectionId: ui.selectedCompleteSectionId });
+  else saveState();
+  ui.completeItemDraft.templateId = template.id;
+  render();
+  showToast("Új tételsablon mentve.");
+}
+
+async function updateCompleteTemplate() {
+  const item = completeQuote.normalizeItem(ui.completeItemDraft);
+  const index = completeCatalog().itemTemplates.findIndex((template) => template.id === item.templateId);
+  if (index < 0) {
+    showToast("A kapcsolt tételsablon már nem érhető el.");
+    return;
+  }
+  const template = { ...completeCatalog().itemTemplates[index], ...item, id: item.templateId };
+  completeCatalog().itemTemplates[index] = template;
+  const result = await window.nyilaszaroApp?.data?.upsertCompleteTemplate?.(clone(template));
+  if (result?.state) syncStateFromMutation(result, { view: "complete-quote-editor", selectedCompleteQuoteId: ui.selectedCompleteQuoteId, selectedCompleteSectionId: ui.selectedCompleteSectionId, selectedCompleteItemId: ui.selectedCompleteItemId });
+  else saveState();
+  render();
+  showToast("Törzstétel frissítve, a régi ajánlati sorok változatlanok.");
+}
+
+async function archiveCompleteTemplate(id) {
+  const template = completeCatalog().itemTemplates.find((item) => item.id === id);
+  if (!template) return;
+  template.active = false;
+  const result = await window.nyilaszaroApp?.data?.archiveCompleteTemplate?.(id);
+  if (result?.state) syncStateFromMutation(result, { view: "complete-quote-editor", selectedCompleteQuoteId: ui.selectedCompleteQuoteId, selectedCompleteSectionId: ui.selectedCompleteSectionId });
+  else saveState();
+  render();
+  showToast("Tételsablon archiválva; a régi ajánlati pillanatképek megmaradnak.");
+}
+
 function nextQuoteNumber() {
   const next = state.quotes.length + 1;
   return `AJ-${new Date().getFullYear()}-${String(next).padStart(4, "0")}`;
@@ -3439,6 +4190,40 @@ async function deleteQuote(id) {
   showToast("Ajánlat törölve.");
 }
 
+async function exportCompleteQuote() {
+  const quote = getSelectedCompleteQuote();
+  if (!quote) return;
+  const validation = completeQuote.validateQuote(quote);
+  if (validation.errors.length) {
+    showToast(`PDF előtt ${validation.errors.length} hibát javíts ki.`);
+    render();
+    return;
+  }
+  if (validation.warnings.length) showToast(`PDF figyelmeztetés: ${validation.warnings.length} ellenőrizendő tétel.`);
+  ui.completePrintStyle = ui.completeExportStyle === "classic" ? "classic" : "modern";
+  render();
+  document.body.classList.add("print-complete");
+  document.body.classList.toggle("print-complete-classic", ui.completePrintStyle === "classic");
+  document.body.classList.toggle("print-complete-modern", ui.completePrintStyle === "modern");
+  await waitForPrintRender();
+  const pdfApi = window.nyilaszaroApp?.pdf;
+  if (pdfApi?.exportCompleteQuote) {
+    try {
+      const result = await pdfApi.exportCompleteQuote({ quoteNumber: quote.number, style: ui.completePrintStyle });
+      clearPrintMode();
+      if (result?.ok) showToast(`PDF mentve: ${result.path}`);
+      else if (result?.canceled) showToast("PDF mentés megszakítva.");
+      else showToast("Nem sikerült PDF-et készíteni.");
+    } catch (error) {
+      console.warn("Nem sikerült komplett PDF-et készíteni.", error);
+      clearPrintMode();
+      showToast("Nem sikerült PDF-et készíteni.");
+    }
+    return;
+  }
+  window.setTimeout(() => window.print(), 0);
+}
+
 async function printQuote(id, mode = "customer") {
   if (id) ui.selectedQuoteId = id;
   ui.printMode = mode === "internal" ? "internal" : "customer";
@@ -3473,8 +4258,9 @@ async function printQuote(id, mode = "customer") {
 }
 
 function clearPrintMode() {
-  document.body.classList.remove("print-internal", "print-customer");
+  document.body.classList.remove("print-internal", "print-customer", "print-complete", "print-complete-classic", "print-complete-modern");
   ui.printMode = "customer";
+  ui.completePrintStyle = "";
 }
 
 function waitForPrintRender() {
@@ -3496,6 +4282,44 @@ async function prepareSmokePrint(mode = "customer") {
     mode: ui.printMode,
     hasPrintSheet: Boolean(printSheet),
     hasQuoteNumber: text.includes("AJ-2026-0001"),
+    hasGrossTotal: text.includes("Fizetendő bruttó")
+  };
+}
+
+async function prepareCompleteSmokePrint(style = "modern") {
+  let quote = state.completeQuotes[0];
+  if (!quote) {
+    const customer = state.customers[0];
+    const category = completeCatalog().categories[0];
+    quote = completeQuote.normalizeQuote({
+      id: "smoke-complete-quote",
+      number: "TZG-2026-0001",
+      customerId: customer?.id || "",
+      projectAddress: customer?.address || "Smoke utca 1.",
+      workDescription: "Komplett ajánlat PDF smoke teszt",
+      createdAt: "2026-08-28",
+      updatedAt: "2026-08-28",
+      validityDays: 15,
+      vat: 27,
+      status: "Vázlat",
+      version: 1,
+      sections: [{ id: "smoke-complete-section", categoryId: category.id, name: category.name, kind: category.kind, position: 0, items: [{ id: "smoke-complete-item", description: "Teszt tétel hosszabb megnevezéssel a több soros PDF tördelés ellenőrzéséhez", quantity: 12.5, unit: "m²", materialUnitNet: 3200, laborUnitNet: 1800, position: 0 }] }]
+    });
+    state.completeQuotes.unshift(quote);
+  }
+  ui.selectedCompleteQuoteId = quote.id;
+  ui.completePrintStyle = style === "classic" ? "classic" : "modern";
+  render();
+  document.body.classList.add("print-complete");
+  document.body.classList.toggle("print-complete-classic", ui.completePrintStyle === "classic");
+  document.body.classList.toggle("print-complete-modern", ui.completePrintStyle === "modern");
+  await waitForPrintRender();
+  const printSheet = document.querySelector(".complete-print-sheet");
+  const text = printSheet?.textContent || "";
+  return {
+    mode: `complete-${ui.completePrintStyle}`,
+    hasPrintSheet: Boolean(printSheet),
+    hasQuoteNumber: text.includes("TZG-2026-0001"),
     hasGrossTotal: text.includes("Fizetendő bruttó")
   };
 }
@@ -3624,7 +4448,8 @@ function editCustomer(id) {
 }
 
 async function deleteCustomer(id) {
-  const used = state.quotes.some((quote) => quote.customerId === id);
+  const used = state.quotes.some((quote) => quote.customerId === id)
+    || state.completeQuotes.some((quote) => quote.customerId === id);
   if (used) {
     showToast("Ez az ügyfél szerepel ajánlatban, ezért nem törölhető.");
     return;

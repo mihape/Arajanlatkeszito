@@ -55,6 +55,30 @@ function createPendingSqliteAdapter() {
       return { ok: false, ready: false, state: null };
     },
 
+    upsertCompleteQuote() {
+      return { ok: false, ready: false, state: null };
+    },
+
+    deleteCompleteQuote() {
+      return { ok: false, ready: false, state: null };
+    },
+
+    upsertCompleteCategory() {
+      return { ok: false, ready: false, state: null };
+    },
+
+    archiveCompleteCategory() {
+      return { ok: false, ready: false, state: null };
+    },
+
+    upsertCompleteTemplate() {
+      return { ok: false, ready: false, state: null };
+    },
+
+    archiveCompleteTemplate() {
+      return { ok: false, ready: false, state: null };
+    },
+
     upsertQuote() {
       return { ok: false, ready: false, state: null };
     },
@@ -141,7 +165,8 @@ function createSqliteAdapter(options = {}) {
 
     deleteCustomer(id) {
       const state = requireState(db);
-      const used = (state.quotes || []).some((quote) => quote.customerId === id);
+      const used = (state.quotes || []).some((quote) => quote.customerId === id)
+        || (state.completeQuotes || []).some((quote) => quote.customerId === id);
       if (used) {
         return {
           ok: false,
@@ -165,6 +190,58 @@ function createSqliteAdapter(options = {}) {
     deleteQuote(id) {
       const state = requireState(db);
       state.quotes = (state.quotes || []).filter((quote) => quote.id !== id);
+      persistState(db, state);
+      return mutationResult(state, dbPath);
+    },
+
+    upsertCompleteQuote(quote) {
+      const state = requireState(db);
+      upsertById(state, "completeQuotes", quote, { prepend: true });
+      persistState(db, state);
+      return mutationResult(state, dbPath);
+    },
+
+    deleteCompleteQuote(id) {
+      const state = requireState(db);
+      state.completeQuotes = (state.completeQuotes || []).filter((quote) => quote.id !== id);
+      persistState(db, state);
+      return mutationResult(state, dbPath);
+    },
+
+    upsertCompleteCategory(category) {
+      const state = requireState(db);
+      state.catalog = state.catalog || {};
+      state.catalog.completeQuote = state.catalog.completeQuote || {};
+      const catalog = state.catalog.completeQuote;
+      if (!Array.isArray(catalog.categories)) catalog.categories = [];
+      upsertById(catalog, "categories", category);
+      persistState(db, state);
+      return mutationResult(state, dbPath);
+    },
+
+    archiveCompleteCategory(id) {
+      const state = requireState(db);
+      const category = state.catalog?.completeQuote?.categories?.find((item) => item.id === id);
+      if (category) category.active = false;
+      persistState(db, state);
+      return mutationResult(state, dbPath);
+    },
+
+    upsertCompleteTemplate(template) {
+      const state = requireState(db);
+      state.catalog = state.catalog || {};
+      state.catalog.completeQuote = state.catalog.completeQuote || {};
+      const catalog = state.catalog.completeQuote;
+      if (!Array.isArray(catalog.itemTemplates)) catalog.itemTemplates = [];
+      upsertById(catalog, "itemTemplates", template);
+      persistState(db, state);
+      return mutationResult(state, dbPath);
+    },
+
+    archiveCompleteTemplate(id) {
+      const state = requireState(db);
+      const template = state.catalog?.completeQuote?.itemTemplates?.find((item) => item.id === id);
+      if (template) template.active = false;
       persistState(db, state);
       return mutationResult(state, dbPath);
     }
@@ -231,7 +308,10 @@ function loadNormalizedState(db) {
     "extensions",
     "accessories",
     "interior_manufacturers",
-    "interior_models"
+    "interior_models",
+    "complete_quote_categories",
+    "complete_quote_templates",
+    "complete_quotes"
   ].some((table) => counts[table] > 0);
   if (!hasNormalizedRows) return null;
 
@@ -250,10 +330,12 @@ function loadNormalizedState(db) {
       glasses: loadGlasses(db),
       extensions: loadExtensions(db),
       accessories: loadAccessories(db),
-      interiorDoors
+      interiorDoors,
+      completeQuote: loadCompleteQuoteCatalog(db)
     },
     openingImages: loadOpeningImages(db),
-    quotes: loadQuotes(db, fallback.quotes || [])
+    quotes: loadQuotes(db, fallback.quotes || []),
+    completeQuotes: loadCompleteQuotes(db, fallback.completeQuotes || [])
   };
 }
 
@@ -278,6 +360,7 @@ function requireState(db) {
   }
   if (!Array.isArray(state.customers)) state.customers = [];
   if (!Array.isArray(state.quotes)) state.quotes = [];
+  if (!Array.isArray(state.completeQuotes)) state.completeQuotes = [];
   return state;
 }
 
@@ -352,6 +435,84 @@ function loadQuotes(db, fallbackQuotes = []) {
       vat: parseVat(row.vat),
       note: row.note || "",
       items: itemsByQuote.get(row.id) || [],
+      ...camelSyncFields(row)
+    };
+  });
+}
+
+function loadCompleteQuoteCatalog(db) {
+  return {
+    categories: db.prepare("SELECT * FROM complete_quote_categories ORDER BY position, id").all().map((row) => ({
+      id: row.id,
+      name: row.name || "",
+      kind: row.kind === "incidental" ? "incidental" : "regular",
+      position: toNumber(row.position),
+      active: Boolean(row.active),
+      ...camelSyncFields(row)
+    })),
+    itemTemplates: db.prepare("SELECT * FROM complete_quote_templates ORDER BY id").all().map((row) => ({
+      id: row.id,
+      categoryId: row.category_id || "",
+      description: row.description || "",
+      unit: row.unit || "db",
+      materialUnitNet: toNumber(row.material_unit_net),
+      laborUnitNet: toNumber(row.labor_unit_net),
+      active: Boolean(row.active),
+      ...camelSyncFields(row)
+    }))
+  };
+}
+
+function loadCompleteQuotes(db, fallbackQuotes = []) {
+  const fallbackById = new Map(fallbackQuotes.map((quote) => [quote.id, quote]));
+  const itemsBySection = db.prepare("SELECT * FROM complete_quote_items ORDER BY section_id, position, id").all().reduce((map, row) => {
+    if (!map.has(row.section_id)) map.set(row.section_id, []);
+    map.get(row.section_id).push({
+      id: row.id,
+      templateId: row.template_id || "",
+      description: row.description || "",
+      quantity: toNumber(row.quantity),
+      unit: row.unit || "",
+      materialUnitNet: toNumber(row.material_unit_net),
+      laborUnitNet: toNumber(row.labor_unit_net),
+      position: toNumber(row.position),
+      ...camelSyncFields(row)
+    });
+    return map;
+  }, new Map());
+  const sectionsByQuote = db.prepare("SELECT * FROM complete_quote_sections ORDER BY quote_id, position, id").all().reduce((map, row) => {
+    if (!map.has(row.quote_id)) map.set(row.quote_id, []);
+    map.get(row.quote_id).push({
+      id: row.id,
+      categoryId: row.category_id || "",
+      name: row.name || "",
+      kind: row.kind === "incidental" ? "incidental" : "regular",
+      position: toNumber(row.position),
+      items: itemsBySection.get(row.id) || [],
+      ...camelSyncFields(row)
+    });
+    return map;
+  }, new Map());
+
+  return db.prepare("SELECT * FROM complete_quotes ORDER BY created_at DESC, id").all().map((row) => {
+    const fallback = fallbackById.get(row.id) || {};
+    let statusHistory = [];
+    try { statusHistory = JSON.parse(row.status_history_json || "[]"); } catch (error) { statusHistory = []; }
+    return {
+      ...fallback,
+      id: row.id,
+      number: row.number || row.id,
+      customerId: row.customer_id || "",
+      projectAddress: row.project_address || "",
+      workDescription: row.work_description || "",
+      createdAt: row.created_on || "",
+      validityDays: toNumber(row.validity_days, 15),
+      vat: parseVat(row.vat),
+      status: row.status || "Vázlat",
+      note: row.note || "",
+      version: toNumber(row.version, 1),
+      statusHistory,
+      sections: sectionsByQuote.get(row.id) || [],
       ...camelSyncFields(row)
     };
   });
@@ -510,6 +671,11 @@ function loadOpeningImages(db) {
 function replaceNormalizedTables(db, state) {
   const now = new Date().toISOString();
   [
+    "complete_quote_items",
+    "complete_quote_sections",
+    "complete_quotes",
+    "complete_quote_templates",
+    "complete_quote_categories",
     "quote_items",
     "quotes",
     "price_matrix_cells",
@@ -540,6 +706,8 @@ function replaceNormalizedTables(db, state) {
   insertAccessories(db, state.catalog?.accessories || [], now);
   insertInteriorCatalog(db, state.catalog?.interiorDoors || {}, now);
   insertQuotes(db, state.quotes || [], state, now);
+  insertCompleteQuoteCatalog(db, state.catalog?.completeQuote || {}, now);
+  insertCompleteQuotes(db, state.completeQuotes || [], state, now);
   insertImages(db, state, now);
 }
 
@@ -607,6 +775,116 @@ function insertQuotes(db, quotes, state, now) {
         JSON.stringify(item),
         ...syncValues(item, now)
       );
+    });
+  });
+}
+
+function insertCompleteQuoteCatalog(db, catalog, now) {
+  const categoryStmt = db.prepare(`
+    INSERT INTO complete_quote_categories (
+      id, name, kind, position, active,
+      external_id, sync_status, synced_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const templateStmt = db.prepare(`
+    INSERT INTO complete_quote_templates (
+      id, category_id, description, unit, material_unit_net, labor_unit_net, active,
+      external_id, sync_status, synced_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const categoryIds = new Set();
+  (catalog.categories || []).forEach((category, index) => {
+    if (!category?.id) return;
+    categoryIds.add(category.id);
+    categoryStmt.run(
+      category.id,
+      category.name || "Új munkanem",
+      category.kind === "incidental" ? "incidental" : "regular",
+      toNumber(category.position, index),
+      category.active === false ? 0 : 1,
+      ...syncValues(category, now)
+    );
+  });
+  (catalog.itemTemplates || []).forEach((template) => {
+    if (!template?.id || !categoryIds.has(template.categoryId)) return;
+    templateStmt.run(
+      template.id,
+      template.categoryId,
+      template.description || "",
+      template.unit || "db",
+      toNumber(template.materialUnitNet),
+      toNumber(template.laborUnitNet),
+      template.active === false ? 0 : 1,
+      ...syncValues(template, now)
+    );
+  });
+}
+
+function insertCompleteQuotes(db, quotes, state, now) {
+  const customerIds = new Set((state.customers || []).map((customer) => customer.id));
+  const quoteStmt = db.prepare(`
+    INSERT INTO complete_quotes (
+      id, number, customer_id, project_address, work_description, created_on, validity_days,
+      vat, status, note, version, status_history_json,
+      external_id, sync_status, synced_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const sectionStmt = db.prepare(`
+    INSERT INTO complete_quote_sections (
+      id, quote_id, category_id, name, kind, position,
+      external_id, sync_status, synced_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const itemStmt = db.prepare(`
+    INSERT INTO complete_quote_items (
+      id, section_id, template_id, description, quantity, unit, material_unit_net, labor_unit_net, position,
+      external_id, sync_status, synced_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  (quotes || []).forEach((quote) => {
+    if (!quote?.id || !quote.number || !customerIds.has(quote.customerId)) return;
+    quoteStmt.run(
+      quote.id,
+      quote.number,
+      quote.customerId,
+      quote.projectAddress || "",
+      quote.workDescription || "",
+      quote.createdAt || now.slice(0, 10),
+      Math.max(1, Math.round(toNumber(quote.validityDays, 15))),
+      String(quote.vat ?? "27"),
+      quote.status || "Vázlat",
+      quote.note || null,
+      Math.max(1, Math.round(toNumber(quote.version, 1))),
+      JSON.stringify(quote.statusHistory || []),
+      ...syncValues(quote, now)
+    );
+    (quote.sections || []).forEach((section, sectionIndex) => {
+      if (!section?.id) return;
+      sectionStmt.run(
+        section.id,
+        quote.id,
+        section.categoryId || null,
+        section.name || "Új munkanem",
+        section.kind === "incidental" ? "incidental" : "regular",
+        toNumber(section.position, sectionIndex),
+        ...syncValues(section, now)
+      );
+      (section.items || []).forEach((item, itemIndex) => {
+        if (!item?.id) return;
+        itemStmt.run(
+          item.id,
+          section.id,
+          item.templateId || null,
+          item.description || "",
+          toNumber(item.quantity),
+          item.unit || "",
+          toNumber(item.materialUnitNet),
+          toNumber(item.laborUnitNet),
+          toNumber(item.position, itemIndex),
+          ...syncValues(item, now)
+        );
+      });
     });
   });
 }

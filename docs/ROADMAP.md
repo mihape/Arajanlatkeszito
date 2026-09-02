@@ -155,6 +155,23 @@ Elfogadasi feltetel:
 - A kiegeszito es beepitesi tetelek armodja egyertelmuen latszik.
 - A belteri ajto custom es standard meretes gyartoi utvonala nem keveredik.
 
+## 5.7 fazis - Komplett ajanlat keszites
+
+Cel: a nyilaszaros ajanlatoktol fuggetlen, ugyfeltorzset megoszto, TERC-szeruen reszletezett epitoipari ajanlatkeszites.
+
+- `TZG-EV-SORSZAM` sorszamu komplett ajanlatok.
+- Munkanem- es tetelsablon-torzs, ajanlati pillanatkepekkel.
+- Nettó anyag- es munkadij-alapu kalkulacio, AFA-val.
+- Classic es Modern A4 PDF-export azonos adattartalommal.
+
+Elfogadasi feltetel:
+
+- Egy ugyfelhez munkanemekkel, tetelsablonokkal es egyedi sorokkal komplett ajanlat keszitheto.
+- Az ajanlat main page, munkanem-osszesito es reszletes munkanem-oldalak formajaban PDF-be exportalhato.
+- A meglévo nyilaszaros ajanlatfolyamat regresszio nelkul mukodik.
+
+Részletes szerződés: [Komplett ajánlat készítés](COMPLETE_QUOTE_MODULE.md).
+
 ## 6. fazis - CRM integracio
 
 Cel: kesobbi CRM-kapcsolat ugy, hogy az app helyben tovabbra is hasznalhato maradjon.

@@ -20,6 +20,11 @@ const TABLES = Object.freeze([
   "interior_handles",
   "interior_locks",
   "item_images",
+  "complete_quote_categories",
+  "complete_quote_templates",
+  "complete_quotes",
+  "complete_quote_sections",
+  "complete_quote_items",
   "sync_queue"
 ]);
 
@@ -47,11 +52,18 @@ const DATA_CHANNELS = Object.freeze({
   UPSERT_CUSTOMER: "data:upsert-customer",
   DELETE_CUSTOMER: "data:delete-customer",
   UPSERT_QUOTE: "data:upsert-quote",
-  DELETE_QUOTE: "data:delete-quote"
+  DELETE_QUOTE: "data:delete-quote",
+  UPSERT_COMPLETE_QUOTE: "data:upsert-complete-quote",
+  DELETE_COMPLETE_QUOTE: "data:delete-complete-quote",
+  UPSERT_COMPLETE_CATEGORY: "data:upsert-complete-category",
+  ARCHIVE_COMPLETE_CATEGORY: "data:archive-complete-category",
+  UPSERT_COMPLETE_TEMPLATE: "data:upsert-complete-template",
+  ARCHIVE_COMPLETE_TEMPLATE: "data:archive-complete-template"
 });
 
 const PDF_CHANNELS = Object.freeze({
-  EXPORT_QUOTE: "pdf:export-quote"
+  EXPORT_QUOTE: "pdf:export-quote",
+  EXPORT_COMPLETE_QUOTE: "pdf:export-complete-quote"
 });
 
 module.exports = {
